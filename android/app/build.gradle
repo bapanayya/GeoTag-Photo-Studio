@@ -17,9 +17,9 @@ android {
     signingConfigs {
         release {
             storeFile file("upload-keystore.jks")
-            storePassword "geotag123"
-            keyAlias "geotag"
-            keyPassword "geotag123"
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "geotag123"
+            keyAlias System.getenv("KEY_ALIAS") ?: "geotag"
+            keyPassword System.getenv("KEY_PASSWORD") ?: "geotag123"
         }
     }
     buildTypes {
