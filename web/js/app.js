@@ -110,6 +110,16 @@ function initDom() {
   elements.btnCloseCameraModal = document.getElementById('btnCloseCameraModal');
   elements.btnCancelCamera = document.getElementById('btnCancelCamera');
   elements.btnSnapPhoto = document.getElementById('btnSnapPhoto');
+
+  // Install App PWA Modal
+  elements.btnInstallApp = document.getElementById('btnInstallApp');
+  elements.installModal = document.getElementById('installModal');
+  elements.btnCloseInstallModal = document.getElementById('btnCloseInstallModal');
+  elements.btnDismissInstallModal = document.getElementById('btnDismissInstallModal');
+  elements.tabDesktop = document.getElementById('tabDesktop');
+  elements.tabIphone = document.getElementById('tabIphone');
+  elements.guideDesktop = document.getElementById('guideDesktop');
+  elements.guideIphone = document.getElementById('guideIphone');
 }
 
 /**
@@ -1188,6 +1198,54 @@ function setupEvents() {
   if (elements.btnDownload) elements.btnDownload.addEventListener('click', downloadActivePhoto);
   if (elements.btnDownloadZip) elements.btnDownloadZip.addEventListener('click', downloadAllZip);
   if (elements.btnShare) elements.btnShare.addEventListener('click', shareActivePhoto);
+
+  // Install App PWA Handlers
+  if (elements.btnInstallApp) elements.btnInstallApp.addEventListener('click', openInstallModal);
+  if (elements.btnCloseInstallModal) elements.btnCloseInstallModal.addEventListener('click', closeInstallModal);
+  if (elements.btnDismissInstallModal) elements.btnDismissInstallModal.addEventListener('click', closeInstallModal);
+
+  if (elements.tabDesktop && elements.tabIphone) {
+    elements.tabDesktop.addEventListener('click', () => {
+      elements.tabDesktop.classList.add('active');
+      elements.tabIphone.classList.remove('active');
+      if (elements.guideDesktop) elements.guideDesktop.style.display = 'block';
+      if (elements.guideIphone) elements.guideIphone.style.display = 'none';
+    });
+    elements.tabIphone.addEventListener('click', () => {
+      elements.tabIphone.classList.add('active');
+      elements.tabDesktop.classList.remove('active');
+      if (elements.guideIphone) elements.guideIphone.style.display = 'block';
+      if (elements.guideDesktop) elements.guideDesktop.style.display = 'none';
+    });
+  }
+}
+
+// PWA Install Prompt Tracking
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (elements.btnInstallApp) {
+    elements.btnInstallApp.innerHTML = '<span>📲</span> <span>Install App</span>';
+  }
+});
+
+function openInstallModal() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        showToast('Installing GeoTag Studio...', 'success');
+      }
+      deferredPrompt = null;
+    });
+    return;
+  }
+  if (elements.installModal) elements.installModal.classList.add('active');
+}
+
+function closeInstallModal() {
+  if (elements.installModal) elements.installModal.classList.remove('active');
 }
 
 // Service Worker Registration

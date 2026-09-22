@@ -71,6 +71,10 @@
           <span>🔒</span>
           <span>100% On-Device &amp; Private</span>
         </div>
+        <button type="button" id="btnInstallApp" class="btn-install-header" title="Install GeoTag Studio as an App on Desktop or iPhone">
+          <span>📲</span>
+          <span>Install App</span>
+        </button>
       </div>
     </header>
 
@@ -344,6 +348,52 @@
         </button>
         <button type="button" id="btnCancelCamera" class="btn-action-secondary">
           Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install App Modal / Guide -->
+  <div id="installModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📲 Install GeoTag Studio</h3>
+        <button type="button" id="btnCloseInstallModal" class="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; line-height: 1.6; color: var(--text-primary);">
+        <div class="install-guide-tabs">
+          <button type="button" class="tab-btn active" id="tabDesktop">💻 Desktop (PC / Mac)</button>
+          <button type="button" class="tab-btn" id="tabIphone">📱 iPhone / iPad (iOS)</button>
+        </div>
+
+        <div id="guideDesktop" class="install-guide-content" style="display: block;">
+          <h4 style="margin: 12px 0 8px; color: var(--accent-primary);">In Google Chrome / Microsoft Edge:</h4>
+          <ol style="padding-left: 20px; margin-bottom: 16px; font-size: 0.9rem;">
+            <li style="margin-bottom: 8px;">Click the <strong>Three Vertical Dots (⋮)</strong> at the top-right corner of your browser (beside your profile icon).</li>
+            <li style="margin-bottom: 8px;">Select <strong>"Save and share"</strong> &rarr; click <strong>"Install GeoTag Studio..."</strong> (or directly <strong>"Install GeoTag Studio..."</strong> in the menu list).</li>
+            <li style="margin-bottom: 8px;">Click <strong>Install</strong> when prompted. GeoTag Studio will open in its own clean window and add a desktop icon!</li>
+          </ol>
+          <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem;">
+            💡 <strong>1-Click Offline Launcher:</strong> On Windows, you can also simply double-click <code>GeoTag-Desktop.bat</code> in your project folder!
+          </div>
+        </div>
+
+        <div id="guideIphone" class="install-guide-content" style="display: none;">
+          <h4 style="margin: 12px 0 8px; color: var(--accent-primary);">On iPhone or iPad using Safari:</h4>
+          <ol style="padding-left: 20px; margin-bottom: 16px; font-size: 0.9rem;">
+            <li style="margin-bottom: 8px;">Open <strong>Safari</strong> and navigate to this site.</li>
+            <li style="margin-bottom: 8px;">Tap the <strong>Share</strong> button at the bottom of the screen (the square with an arrow pointing up: <code>[ ↑ ]</code>).</li>
+            <li style="margin-bottom: 8px;">Scroll down and tap <strong>"Add to Home Screen"</strong> (<code>[ + ]</code>).</li>
+            <li style="margin-bottom: 8px;">Tap <strong>"Add"</strong> in the top right corner.</li>
+          </ol>
+          <div style="background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem;">
+            ✅ The <strong>GeoTag Studio</strong> app icon will appear directly on your iPhone home screen and open full-screen like a native app!
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end;">
+        <button type="button" id="btnDismissInstallModal" class="btn-action-primary">
+          Got It
         </button>
       </div>
     </div>

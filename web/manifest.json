@@ -1,22 +1,27 @@
 {
   "name": "GeoTag Studio",
-  "short_name": "GeoTag",
-  "description": "Custom GPS Map Camera & EXIF Photo Stamping Studio for Desktop and Android",
+  "short_name": "GeoTag Studio",
+  "description": "Geo-Tag Camera & EXIF Photo Stamping Studio for Desktop and Mobile",
+  "id": "./",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "any",
+  "categories": ["photography", "utilities", "productivity"],
   "icons": [
     {
       "src": "./assets/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "./assets/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
