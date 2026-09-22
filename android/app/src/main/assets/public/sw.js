@@ -1,10 +1,9 @@
-const CACHE_NAME = 'geotag-studio-v1';
+const CACHE_NAME = 'geotag-studio-v2';
 const ASSETS = [
   './',
   './index.html',
   './css/styles.css',
   './js/app.bundle.js',
-  './assets/sample.png',
   './assets/leaflet/leaflet.js',
   './assets/leaflet/leaflet.css',
   './assets/vendor/jszip.min.js',

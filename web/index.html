@@ -278,13 +278,16 @@
           </div>
 
           <div class="toolbar-actions">
-            <button type="button" id="btnShare" class="btn-action-secondary" title="Share via Android or Mobile apps">
+            <button type="button" id="btnClearPhoto" class="btn-action-danger" style="display:none" title="Clear loaded photo and return to blank canvas">
+              🗑️ Clear Photo
+            </button>
+            <button type="button" id="btnShare" class="btn-action-secondary" disabled title="Share via Android or Mobile apps">
               📤 Share
             </button>
             <button type="button" id="btnDownloadZip" class="btn-action-secondary" style="display:none" title="Download all batch photos in a single ZIP">
               📦 Download All (ZIP)
             </button>
-            <button type="button" id="btnDownload" class="btn-action-primary" title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
+            <button type="button" id="btnDownload" class="btn-action-primary" disabled title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
               📥 Download Geo-Tagged Photo
             </button>
           </div>

@@ -89,6 +89,7 @@ function initDom() {
   // Action Buttons
   elements.btnCurrentGps = document.getElementById('btnCurrentGps');
   elements.btnOpenMap = document.getElementById('btnOpenMap');
+  elements.btnClearPhoto = document.getElementById('btnClearPhoto');
   elements.btnDownload = document.getElementById('btnDownload');
   elements.btnDownloadZip = document.getElementById('btnDownloadZip');
   elements.btnShare = document.getElementById('btnShare');
@@ -320,56 +321,36 @@ function syncInputsToState() {
 }
 
 /**
- * Preload Sample Demo Photo on Startup
+ * Initial Blank State Management & Photo Removal
  */
-function preloadSamplePhoto() {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    state.photos.push({
-      id: 'photo_sample',
-      file: null,
-      img,
-      exif: null,
-      name: 'SVA_Govt_College_Event.png'
-    });
+function initInitialState() {
+  state.photos = [];
+  state.activePhotoIndex = 0;
+  if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+  if (elements.outputCanvas) {
+    elements.outputCanvas.style.display = 'none';
+    const ctx = elements.outputCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, elements.outputCanvas.width, elements.outputCanvas.height);
+  }
+  if (elements.batchGallery) {
+    elements.batchGallery.style.display = 'none';
+    elements.batchGallery.innerHTML = '';
+  }
+  if (elements.photoMetrics) elements.photoMetrics.textContent = 'Ready for photo';
+  if (elements.btnDownload) elements.btnDownload.disabled = true;
+  if (elements.btnShare) elements.btnShare.disabled = true;
+  if (elements.btnDownloadZip) elements.btnDownloadZip.style.display = 'none';
+  if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
+  syncStateToInputs();
+}
 
-    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
-    if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
-
-    syncStateToInputs();
-    triggerRender();
-  };
-  img.onerror = () => {
-    // If local asset cannot load, create fallback canvas background
-    const fallbackCanvas = document.createElement('canvas');
-    fallbackCanvas.width = 1024;
-    fallbackCanvas.height = 575;
-    const fctx = fallbackCanvas.getContext('2d');
-    const grad = fctx.createLinearGradient(0, 0, 1024, 575);
-    grad.addColorStop(0, '#1e293b');
-    grad.addColorStop(1, '#0f172a');
-    fctx.fillStyle = grad;
-    fctx.fillRect(0, 0, 1024, 575);
-    fctx.fillStyle = '#64748b';
-    fctx.font = '24px sans-serif';
-    fctx.textAlign = 'center';
-    fctx.fillText('Upload Your Photo to Apply Custom Geo-Tag', 512, 287);
-
-    state.photos.push({
-      id: 'photo_fallback',
-      file: null,
-      img: fallbackCanvas,
-      exif: null,
-      name: 'Studio_Preview.png'
-    });
-
-    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
-    if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
-    syncStateToInputs();
-    triggerRender();
-  };
-  img.src = './assets/sample.png';
+function clearPhotos() {
+  state.photos = [];
+  state.activePhotoIndex = 0;
+  if (elements.fileInput) elements.fileInput.value = '';
+  if (elements.cameraInput) elements.cameraInput.value = '';
+  initInitialState();
+  showToast('Photo removed. Ready for new photo.', 'info');
 }
 
 /**
@@ -386,11 +367,9 @@ async function handleFiles(fileList) {
 
   showToast(`Loading ${validFiles.length} photo(s)...`, 'info');
 
-  // If currently only having the initial sample photo, replace it
-  if (state.photos.length === 1 && state.photos[0].id.startsWith('photo_')) {
-    state.photos = [];
-    state.activePhotoIndex = 0;
-  }
+  // Completely reset photos on new selection so previous/test photos never linger in background
+  state.photos = [];
+  state.activePhotoIndex = 0;
 
   for (let i = 0; i < validFiles.length; i++) {
     const file = validFiles[i];
@@ -444,12 +423,19 @@ async function handleFiles(fileList) {
   }
 
   updateBatchGallery();
-  if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
-  if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
+  if (state.photos.length > 0) {
+    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
+    if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
+    if (elements.btnDownload) elements.btnDownload.disabled = false;
+    if (elements.btnShare) elements.btnShare.disabled = false;
+    if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
 
-  syncStateToInputs();
-  triggerRender();
-  showToast(`${validFiles.length} photo(s) ready!`, 'success');
+    syncStateToInputs();
+    triggerRender();
+    showToast(`${validFiles.length} photo(s) ready!`, 'success');
+  } else {
+    initInitialState();
+  }
 }
 
 /**
@@ -491,9 +477,29 @@ function triggerRender() {
 }
 
 async function performRender() {
-  if (state.photos.length === 0) return;
+  if (state.photos.length === 0) {
+    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.outputCanvas) {
+      elements.outputCanvas.style.display = 'none';
+      const ctx = elements.outputCanvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, elements.outputCanvas.width, elements.outputCanvas.height);
+    }
+    if (elements.photoMetrics) elements.photoMetrics.textContent = 'Ready for photo';
+    if (elements.btnDownload) elements.btnDownload.disabled = true;
+    if (elements.btnShare) elements.btnShare.disabled = true;
+    if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
+    return;
+  }
   const currentPhoto = state.photos[state.activePhotoIndex];
-  if (!currentPhoto || !currentPhoto.img) return;
+  if (!currentPhoto || !currentPhoto.img) {
+    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.outputCanvas) {
+      elements.outputCanvas.style.display = 'none';
+      const ctx = elements.outputCanvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, elements.outputCanvas.width, elements.outputCanvas.height);
+    }
+    return;
+  }
 
   syncInputsToState();
 
@@ -501,10 +507,18 @@ async function performRender() {
     state.isRendering = true;
     const canvas = await renderGeoTagPhoto(currentPhoto.img, state.tagData, state.options);
 
-    // Update Output Canvas
+    // Show output canvas, hide empty placeholder, and enable download/share
+    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
+    if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
+    if (elements.btnDownload) elements.btnDownload.disabled = false;
+    if (elements.btnShare) elements.btnShare.disabled = false;
+    if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
+
+    // Update Output Canvas - clear completely before drawing new stamped photo
     elements.outputCanvas.width = canvas.width;
     elements.outputCanvas.height = canvas.height;
     const ctx = elements.outputCanvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(canvas, 0, 0);
 
     // Update Metrics Badge
@@ -1169,7 +1183,8 @@ function setupEvents() {
   if (elements.btnCloseMapModal) elements.btnCloseMapModal.addEventListener('click', () => elements.mapModal.classList.remove('active'));
   if (elements.btnConfirmMapLocation) elements.btnConfirmMapLocation.addEventListener('click', confirmMapLocation);
 
-  // Download & Share
+  // Download & Share & Clear
+  if (elements.btnClearPhoto) elements.btnClearPhoto.addEventListener('click', clearPhotos);
   if (elements.btnDownload) elements.btnDownload.addEventListener('click', downloadActivePhoto);
   if (elements.btnDownloadZip) elements.btnDownloadZip.addEventListener('click', downloadAllZip);
   if (elements.btnShare) elements.btnShare.addEventListener('click', shareActivePhoto);
@@ -1187,7 +1202,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initDom();
   setupEvents();
   loadPresets();
-  preloadSamplePhoto();
+  initInitialState();
   registerServiceWorker();
   console.log('🚀 GeoTag Studio Ready!');
 });
