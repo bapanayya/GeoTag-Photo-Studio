@@ -71,6 +71,7 @@ jobs:
 
       - name: Prepare Named Release Assets
         run: |
+          find android/app/build -name "*.apk" -o -name "*.aab" || true
           cp android/app/build/outputs/apk/debug/app-debug.apk GeoTagStudio.apk || true
           if ls android/app/build/outputs/bundle/release/*.aab 1> /dev/null 2>&1; then
             cp android/app/build/outputs/bundle/release/*.aab GeoTagStudio.aab || true
@@ -82,6 +83,7 @@ jobs:
         with:
           tag_name: v1.0.0
           name: "GeoTag Studio Android App v1.0.0 (Official Release)"
+          fail_on_unmatched_files: false
           body: |
             ### 📱 GeoTag Studio Official Android Application
             - **Custom GPS Map Camera & EXIF Stamping**: Privacy-first, 100% on-device photo geotagging
@@ -95,6 +97,8 @@ jobs:
           files: |
             GeoTagStudio.apk
             GeoTagStudio.aab
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/bundle/release/*.aab
           draft: false
           prerelease: false
         env:
