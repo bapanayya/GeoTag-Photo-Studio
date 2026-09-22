@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GeoTag Studio - Geo-Tag Camera &amp; EXIF Photo Stamping</title>
   <meta name="description" content="Add customizable Geo-Tag Camera stamps, mini-map snippets, and binary EXIF metadata to photos on Desktop and Android. 100% on-device &amp; private.">
   <meta name="theme-color" content="#0f172a">
@@ -53,30 +53,51 @@
   <div class="app-container">
     <!-- App Header -->
     <header class="app-header">
-      <div class="brand-row">
-        <img src="./assets/Geo-Tag-Camera-Logo.png" alt="Geo-Tag Camera Logo" class="brand-logo-img">
-        <div class="brand-text">
-          <h1>GeoTag Studio</h1>
-          <p>Geo-Tag Camera &amp; EXIF Photo Stamping</p>
+      <div class="header-top-row">
+        <div class="brand-row">
+          <img src="./assets/Geo-Tag-Camera-Logo.png" alt="Geo-Tag Camera Logo" class="brand-logo-img">
+          <div class="brand-text">
+            <h1>GeoTag Studio</h1>
+            <p>Geo-Tag Camera &amp; EXIF Photo Stamping</p>
+          </div>
+        </div>
+
+        <div class="header-status-badges">
+          <div class="badge-privacy" title="All processing happens directly on your device. Zero photos uploaded to any server.">
+            <span>🔒</span>
+            <span class="privacy-label-full">100% On-Device &amp; Private</span>
+            <span class="privacy-label-short">100% Private</span>
+          </div>
+          <button type="button" id="btnInstallApp" class="btn-install-header" title="Install GeoTag Studio as an App on Desktop or iPhone">
+            <span>📲</span>
+            <span class="install-label-full">Install App</span>
+            <span class="install-label-short">Install</span>
+          </button>
         </div>
       </div>
 
-      <div class="header-badges">
+      <div class="header-preset-row">
         <div class="badge-preset">
+          <span class="preset-icon-label" title="Favourite Places & Location Presets">📍</span>
           <select id="presetSelect" class="preset-select" title="Choose a favourite place or location preset">
             <option value="">-- Choose Location Preset --</option>
           </select>
         </div>
-        <div class="badge-privacy">
-          <span>🔒</span>
-          <span>100% On-Device &amp; Private</span>
-        </div>
-        <button type="button" id="btnInstallApp" class="btn-install-header" title="Install GeoTag Studio as an App on Desktop or iPhone">
-          <span>📲</span>
-          <span>Install App</span>
-        </button>
       </div>
     </header>
+
+    <!-- Mobile Workspace Navigation Tabs (Visible only on Smartphones / Small Screens) -->
+    <nav class="mobile-workspace-nav" id="mobileWorkspaceNav">
+      <button type="button" class="mobile-nav-tab active" id="tabMobileControls">
+        <span class="tab-icon">⚙️</span>
+        <span>Photo &amp; Settings</span>
+      </button>
+      <button type="button" class="mobile-nav-tab" id="tabMobilePreview">
+        <span class="tab-icon">🖼️</span>
+        <span>Live Preview &amp; Save</span>
+        <span id="mobilePreviewPill" class="mobile-preview-pill" style="display:none">Ready</span>
+      </button>
+    </nav>
 
     <!-- Main Workspace -->
     <div class="app-workspace">
@@ -108,6 +129,11 @@
 
           <!-- Batch Thumbnails Gallery -->
           <div id="batchGallery" class="batch-gallery" style="display:none"></div>
+
+          <!-- Mobile Quick Jump to Preview (Mobile Only) -->
+          <button type="button" id="btnMobileJumpToPreview" class="btn-mobile-jump" style="display:none">
+            <span>🖼️ View Stamped Photo Preview &rarr;</span>
+          </button>
         </section>
 
         <!-- 2. Location Details Section -->
@@ -286,16 +312,16 @@
 
           <div class="toolbar-actions">
             <button type="button" id="btnClearPhoto" class="btn-action-danger" style="display:none" title="Clear loaded photo and return to blank canvas">
-              🗑️ Clear Photo
+              🗑️ <span class="btn-label-text">Clear</span>
             </button>
             <button type="button" id="btnShare" class="btn-action-secondary" disabled title="Share via Android or Mobile apps">
-              📤 Share
+              📤 <span class="btn-label-text">Share</span>
             </button>
             <button type="button" id="btnDownloadZip" class="btn-action-secondary" style="display:none" title="Download all batch photos in a single ZIP">
-              📦 Download All (ZIP)
+              📦 <span class="btn-label-text">ZIP</span>
             </button>
             <button type="button" id="btnDownload" class="btn-action-primary" disabled title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
-              📥 Download Geo-Tagged Photo
+              📥 <span class="btn-dl-text-full">Download Geo-Tagged Photo</span><span class="btn-dl-text-short">Download</span>
             </button>
           </div>
         </div>
@@ -308,6 +334,13 @@
             <p class="empty-desc">Upload or take a photo from the sidebar to stamp custom location details, map snippet, and binary EXIF metadata.</p>
           </div>
           <canvas id="outputCanvas" style="display:none"></canvas>
+        </div>
+
+        <!-- Mobile Back to Controls Footer (Mobile Only) -->
+        <div class="mobile-preview-footer">
+          <button type="button" id="btnMobileBackToControls" class="btn-mobile-back">
+            <span>⚙️ Edit Location, Preset &amp; Stamp Details</span>
+          </button>
         </div>
       </main>
     </div>
