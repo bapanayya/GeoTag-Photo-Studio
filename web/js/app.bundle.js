@@ -1653,14 +1653,6 @@ function initDom() {
   elements.tabIphone = document.getElementById('tabIphone');
   elements.guideDesktop = document.getElementById('guideDesktop');
   elements.guideIphone = document.getElementById('guideIphone');
-
-  // Mobile Workspace Navigation Tabs
-  elements.appWorkspace = document.querySelector('.app-workspace');
-  elements.tabMobileControls = document.getElementById('tabMobileControls');
-  elements.tabMobilePreview = document.getElementById('tabMobilePreview');
-  elements.mobilePreviewPill = document.getElementById('mobilePreviewPill');
-  elements.btnMobileBackToControls = document.getElementById('btnMobileBackToControls');
-  elements.btnMobileJumpToPreview = document.getElementById('btnMobileJumpToPreview');
 }
 
 /**
@@ -1892,17 +1884,6 @@ function initInitialState() {
   if (elements.btnShare) elements.btnShare.disabled = true;
   if (elements.btnDownloadZip) elements.btnDownloadZip.style.display = 'none';
   if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
-
-  // Reset Mobile Navigation Tabs
-  if (elements.appWorkspace) {
-    elements.appWorkspace.classList.remove('view-preview');
-    elements.appWorkspace.classList.add('view-controls');
-  }
-  if (elements.tabMobileControls) elements.tabMobileControls.classList.add('active');
-  if (elements.tabMobilePreview) elements.tabMobilePreview.classList.remove('active');
-  if (elements.mobilePreviewPill) elements.mobilePreviewPill.style.display = 'none';
-  if (elements.btnMobileJumpToPreview) elements.btnMobileJumpToPreview.style.display = 'none';
-
   syncStateToInputs();
 }
 
@@ -1913,25 +1894,6 @@ function clearPhotos() {
   if (elements.cameraInput) elements.cameraInput.value = '';
   initInitialState();
   showToast('Photo removed. Ready for new photo.', 'info');
-}
-
-/**
- * Switch Mobile Workspace View (Controls vs Live Preview)
- */
-function switchMobileTab(tab) {
-  if (!elements.appWorkspace) return;
-  if (tab === 'preview') {
-    elements.appWorkspace.classList.remove('view-controls');
-    elements.appWorkspace.classList.add('view-preview');
-    if (elements.tabMobileControls) elements.tabMobileControls.classList.remove('active');
-    if (elements.tabMobilePreview) elements.tabMobilePreview.classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else {
-    elements.appWorkspace.classList.remove('view-preview');
-    elements.appWorkspace.classList.add('view-controls');
-    if (elements.tabMobileControls) elements.tabMobileControls.classList.add('active');
-    if (elements.tabMobilePreview) elements.tabMobilePreview.classList.remove('active');
-  }
 }
 
 /**
@@ -2010,16 +1972,10 @@ async function handleFiles(fileList) {
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
-    if (elements.mobilePreviewPill) elements.mobilePreviewPill.style.display = 'inline-block';
-    if (elements.btnMobileJumpToPreview) elements.btnMobileJumpToPreview.style.display = 'flex';
 
     syncStateToInputs();
     triggerRender();
     showToast(`${validFiles.length} photo(s) ready!`, 'success');
-
-    if (window.innerWidth <= 900) {
-      switchMobileTab('preview');
-    }
   } else {
     initInitialState();
   }
@@ -2075,8 +2031,6 @@ async function performRender() {
     if (elements.btnDownload) elements.btnDownload.disabled = true;
     if (elements.btnShare) elements.btnShare.disabled = true;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
-    if (elements.mobilePreviewPill) elements.mobilePreviewPill.style.display = 'none';
-    if (elements.btnMobileJumpToPreview) elements.btnMobileJumpToPreview.style.display = 'none';
     return;
   }
   const currentPhoto = state.photos[state.activePhotoIndex];
@@ -2102,8 +2056,6 @@ async function performRender() {
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
-    if (elements.mobilePreviewPill) elements.mobilePreviewPill.style.display = 'inline-block';
-    if (elements.btnMobileJumpToPreview) elements.btnMobileJumpToPreview.style.display = 'flex';
 
     // Update Output Canvas - clear completely before drawing new stamped photo
     elements.outputCanvas.width = canvas.width;
@@ -2798,20 +2750,6 @@ function setupEvents() {
       if (elements.guideIphone) elements.guideIphone.style.display = 'block';
       if (elements.guideDesktop) elements.guideDesktop.style.display = 'none';
     });
-  }
-
-  // Mobile Workspace Navigation Listeners
-  if (elements.tabMobileControls) {
-    elements.tabMobileControls.addEventListener('click', () => switchMobileTab('controls'));
-  }
-  if (elements.tabMobilePreview) {
-    elements.tabMobilePreview.addEventListener('click', () => switchMobileTab('preview'));
-  }
-  if (elements.btnMobileBackToControls) {
-    elements.btnMobileBackToControls.addEventListener('click', () => switchMobileTab('controls'));
-  }
-  if (elements.btnMobileJumpToPreview) {
-    elements.btnMobileJumpToPreview.addEventListener('click', () => switchMobileTab('preview'));
   }
 }
 

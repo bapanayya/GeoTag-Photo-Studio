@@ -198,9 +198,7 @@ html, body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
+  width: 100vw;
 }
 
 /* App Header */
@@ -213,61 +211,6 @@ html, body {
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   z-index: 10;
-  gap: 16px;
-}
-
-.header-top-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.header-status-badges {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-preset-row {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  max-width: 440px;
-}
-
-.header-preset-row .badge-preset {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.header-preset-row .preset-select {
-  width: 100%;
-  flex: 1;
-}
-
-.preset-icon-label {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.privacy-label-short,
-.install-label-short {
-  display: none;
-}
-
-.privacy-label-full,
-.install-label-full {
-  display: inline;
-}
-
-.btn-dl-text-short {
-  display: none;
-}
-
-.btn-dl-text-full {
-  display: inline;
 }
 
 .brand-row {
@@ -1247,326 +1190,40 @@ input:checked + .slider:before {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Mobile Workspace Navigation Tabs (Hidden on Desktop) */
-.mobile-workspace-nav {
-  display: none;
-  background-color: var(--bg-surface-elevated);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  padding: 6px 12px;
-  gap: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-
-.mobile-nav-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background-color: var(--bg-surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.mobile-nav-tab.active {
-  background: var(--accent-primary);
-  color: #0f172a;
-  border-color: var(--accent-primary);
-  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
-}
-
-.mobile-preview-pill {
-  background-color: #10b981;
-  color: #ffffff;
-  font-size: 0.65rem;
-  padding: 1px 6px;
-  border-radius: 9999px;
-  font-weight: 800;
-}
-
-.mobile-preview-footer {
-  display: none;
-  padding: 12px 16px;
-  background-color: var(--bg-surface);
-  border-top: 1px solid var(--border-color);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.btn-mobile-back {
-  width: 100%;
-  background-color: var(--bg-surface-elevated);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.15s;
-}
-
-.btn-mobile-back:hover {
-  background-color: var(--border-color);
-}
-
-.btn-mobile-jump {
-  display: none;
-  width: 100%;
-  margin-top: 10px;
-  background: var(--accent-gradient);
-  color: #ffffff;
-  border: none;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  box-shadow: var(--shadow-md);
-}
-
-/* Mobile Responsive (Smartphones & Tablets <= 900px) */
+/* Mobile Responsive */
 @media (max-width: 900px) {
-  /* YouTube Top Banner */
-  .youtube-banner-container {
-    padding: 6px 10px;
-    gap: 8px;
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .youtube-banner-left {
-    min-width: 0;
-    flex: 1;
-    gap: 8px;
-  }
-
-  .youtube-banner-logo {
-    width: 34px;
-    height: 34px;
-    border-width: 1.5px;
-  }
-
-  .youtube-channel-desc {
-    display: none;
-  }
-
-  .channel-name {
-    font-size: 0.84rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
-  }
-
-  .yt-badge {
-    font-size: 0.56rem;
-    padding: 1px 4px;
-  }
-
-  .btn-youtube-subscribe {
-    padding: 5px 10px;
-    font-size: 0.74rem;
-    white-space: nowrap;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-
-  /* App Header 2-Tier Mobile Layout */
-  .app-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 8px 12px;
-    gap: 8px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .header-top-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .brand-row {
-    gap: 8px;
-    min-width: 0;
-    flex: 1;
-  }
-
-  .brand-logo-img {
-    height: 34px;
-  }
-
-  .brand-text h1 {
-    font-size: 0.98rem;
-    white-space: nowrap;
-  }
-
-  .brand-text p {
-    font-size: 0.65rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 160px;
-  }
-
-  .header-status-badges {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-shrink: 0;
-  }
-
-  .privacy-label-full {
-    display: none;
-  }
-
-  .privacy-label-short {
-    display: inline;
-  }
-
-  .install-label-full {
-    display: none;
-  }
-
-  .install-label-short {
-    display: inline;
-  }
-
-  .badge-privacy {
-    padding: 4px 8px;
-    font-size: 0.68rem;
-    font-weight: 700;
-  }
-
-  .btn-install-header {
-    padding: 4px 8px;
-    font-size: 0.68rem;
-    font-weight: 700;
-  }
-
-  /* Header Row 2: Full Width Favourite Places / Presets */
-  .header-preset-row {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .header-preset-row .badge-preset {
-    width: 100%;
-    gap: 6px;
-  }
-
-  .header-preset-row .preset-select {
-    width: 100%;
-    font-size: 0.84rem;
-    padding: 8px 10px;
-    font-weight: 600;
-    border: 1.5px solid var(--accent-primary);
-    background-color: var(--bg-surface-elevated);
-    border-radius: var(--radius-sm);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  }
-
-  /* Mobile Workspace Switcher Tabs */
-  .mobile-workspace-nav {
-    display: flex;
-  }
-
   .app-workspace {
     flex-direction: column;
     height: auto;
-    overflow: visible;
+    overflow: auto;
   }
 
-  /* Tab View State Management */
-  .app-workspace.view-controls .sidebar-controls {
-    display: flex;
+  .sidebar-controls {
     width: 100%;
     height: auto;
     border-right: none;
+    border-bottom: 1px solid var(--border-color);
   }
 
-  .app-workspace.view-controls .preview-panel {
-    display: none;
+  .preview-panel {
+    min-height: 480px;
   }
 
-  .app-workspace.view-preview .sidebar-controls {
-    display: none;
+  .youtube-banner-container {
+    padding: 0.4rem 0.85rem;
+    gap: 0.65rem;
   }
 
-  .app-workspace.view-preview .preview-panel {
-    display: flex;
-    width: 100%;
-    min-height: calc(100vh - 210px);
-    height: auto;
+  .youtube-channel-desc {
+    display: none; /* Keep banner compact on mobile screens */
   }
 
-  .mobile-preview-footer {
-    display: flex;
+  .channel-name {
+    font-size: 0.95rem;
   }
 
-  .btn-mobile-jump {
-    display: flex;
-  }
-
-  /* Location Buttons 3-Column Grid */
-  .location-btn-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-  }
-
-  .btn-gps, .btn-map-picker, .btn-fav-save-tab {
-    padding: 8px 4px;
-    font-size: 0.72rem;
-    white-space: nowrap;
-    text-align: center;
-    justify-content: center;
-  }
-
-  /* Preview Toolbar Responsive */
-  .preview-toolbar {
-    padding: 8px 12px;
-    gap: 6px;
-  }
-
-  .toolbar-actions {
-    gap: 5px;
-  }
-
-  .btn-action-primary,
-  .btn-action-secondary,
-  .btn-action-danger {
-    padding: 6px 10px;
-    font-size: 0.78rem;
-  }
-
-  .btn-dl-text-full {
-    display: none;
-  }
-
-  .btn-dl-text-short {
-    display: inline;
+  .brand-logo-img {
+    height: 38px;
   }
 }
 
