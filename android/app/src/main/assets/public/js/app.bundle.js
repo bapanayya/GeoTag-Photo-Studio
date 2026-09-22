@@ -230,24 +230,13 @@ function formatGpsDateTime(date = new Date(), customTimezoneOffset = null) {
     date = new Date();
   }
 
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayName = days[date.getDay()];
-
   const pad = (n) => String(n).padStart(2, '0');
-  const day = pad(date.getDate());
-  const month = pad(date.getMonth() + 1);
-  const year = date.getFullYear();
 
-  let hours = date.getHours();
-  const minutes = pad(date.getMinutes());
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const formattedHours = pad(hours);
-
-  // Timezone string
+  // If customTimezoneOffset is provided (in minutes), adjust date to that timezone
+  let targetDate = date;
   let tzStr = '';
   if (customTimezoneOffset !== null) {
+    targetDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000) + (customTimezoneOffset * 60000));
     const sign = customTimezoneOffset >= 0 ? '+' : '-';
     const totalMinutes = Math.abs(customTimezoneOffset);
     const tzHours = pad(Math.floor(totalMinutes / 60));
@@ -260,6 +249,20 @@ function formatGpsDateTime(date = new Date(), customTimezoneOffset = null) {
     const tzMins = pad(Math.abs(offsetMin) % 60);
     tzStr = `GMT ${sign}${tzHours}:${tzMins}`;
   }
+
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = days[targetDate.getDay()];
+
+  const day = pad(targetDate.getDate());
+  const month = pad(targetDate.getMonth() + 1);
+  const year = targetDate.getFullYear();
+
+  let hours = targetDate.getHours();
+  const minutes = pad(targetDate.getMinutes());
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const formattedHours = pad(hours);
 
   return `${dayName}, ${day}/${month}/${year} ${formattedHours}:${minutes} ${ampm} ${tzStr}`;
 }

@@ -83,7 +83,7 @@ jobs:
           tag_name: v1.0.0
           name: "GeoTag Studio Android App v1.0.0 (Official Release)"
           body: |
-            ### ?? GeoTag Studio Official Android Application
+            ### 📱 GeoTag Studio Official Android Application
             - **Custom GPS Map Camera & EXIF Stamping**: Privacy-first, 100% on-device photo geotagging
             - **Photo-Friendly Compact Layout**: Bottom-left compact stamp ensures photo subjects remain unblocked
             - **Interactive Mini-Map & Binary EXIF**: Embeds satellite/street mini-map and real EXIF GPS metadata
