@@ -1,0 +1,13 @@
+{
+	"appId": "com.geotag.photostudio",
+	"appName": "GeoTag Studio",
+	"webDir": "web",
+	"server": {
+		"androidScheme": "https"
+	},
+	"android": {
+		"allowMixedContent": true,
+		"captureInput": true,
+		"webContentsDebuggingEnabled": true
+	}
+}
