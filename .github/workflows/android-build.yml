@@ -52,11 +52,11 @@ jobs:
           cd android
           chmod +x gradlew 2>/dev/null || true
           if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace
-            ./gradlew bundleRelease --stacktrace || true
+            ./gradlew assembleDebug --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "### Gradle Build Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/gradle.log >> $GITHUB_STEP_SUMMARY; exit 1)
+            ./gradlew bundleRelease --stacktrace 2>&1 | tee /tmp/bundle.log || (echo "### Gradle Bundle Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/bundle.log >> $GITHUB_STEP_SUMMARY; exit 1)
           else
-            gradle assembleDebug --stacktrace
-            gradle bundleRelease --stacktrace || true
+            gradle assembleDebug --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "### Gradle Build Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/gradle.log >> $GITHUB_STEP_SUMMARY; exit 1)
+            gradle bundleRelease --stacktrace 2>&1 | tee /tmp/bundle.log || (echo "### Gradle Bundle Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/bundle.log >> $GITHUB_STEP_SUMMARY; exit 1)
           fi
 
       - name: Upload APK Artifact
