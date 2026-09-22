@@ -1,4 +1,4 @@
-﻿include ':app'
+include ':app'
 rootProject.name = 'GeoTagStudio'
 
 apply from: 'capacitor.settings.gradle'

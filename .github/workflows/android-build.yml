@@ -49,14 +49,15 @@ jobs:
 
       - name: Build Android APK and App Bundle (AAB for Google Play Store)
         run: |
+          set -eo pipefail
           cd android
           chmod +x gradlew 2>/dev/null || true
           if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "### Gradle Build Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/gradle.log >> $GITHUB_STEP_SUMMARY; exit 1)
-            ./gradlew bundleRelease --stacktrace 2>&1 | tee /tmp/bundle.log || (echo "### Gradle Bundle Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/bundle.log >> $GITHUB_STEP_SUMMARY; exit 1)
+            ./gradlew assembleDebug --stacktrace
+            ./gradlew bundleRelease --stacktrace
           else
-            gradle assembleDebug --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "### Gradle Build Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/gradle.log >> $GITHUB_STEP_SUMMARY; exit 1)
-            gradle bundleRelease --stacktrace 2>&1 | tee /tmp/bundle.log || (echo "### Gradle Bundle Failure" >> $GITHUB_STEP_SUMMARY; cat /tmp/bundle.log >> $GITHUB_STEP_SUMMARY; exit 1)
+            gradle assembleDebug --stacktrace
+            gradle bundleRelease --stacktrace
           fi
 
       - name: Upload APK Artifact
@@ -73,6 +74,7 @@ jobs:
 
       - name: Prepare Named Release Assets
         run: |
+          set -eo pipefail
           echo "### Build Artifacts Discovery" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           find android/app/build -name "*.apk" -o -name "*.aab" | tee -a $GITHUB_STEP_SUMMARY
@@ -87,11 +89,17 @@ jobs:
           if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
             cp "$APK_PATH" GeoTagStudio.apk
             echo "Copied APK to GeoTagStudio.apk ($(ls -lh GeoTagStudio.apk | awk '{print $5}'))" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ERROR: APK not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
           fi
           
           if [ -n "$AAB_PATH" ] && [ -f "$AAB_PATH" ]; then
             cp "$AAB_PATH" GeoTagStudio.aab
             echo "Copied AAB to GeoTagStudio.aab ($(ls -lh GeoTagStudio.aab | awk '{print $5}'))" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ERROR: AAB not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
           fi
 
       - name: Create or Update GitHub Release with APK and AAB
@@ -100,7 +108,7 @@ jobs:
         with:
           tag_name: v1.0.1
           name: "GeoTag Studio Android App v1.0.1 (Official Release)"
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
           body: |
             ### 📱 GeoTag Studio Official Android Application (v1.0.1)
             - **Custom GPS Map Camera & EXIF Stamping**: Privacy-first, 100% on-device photo geotagging
