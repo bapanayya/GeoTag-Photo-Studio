@@ -48,13 +48,12 @@ jobs:
       - name: Build Android APK and App Bundle (AAB for Google Play Store)
         run: |
           cd android
-          gradle wrapper --gradle-version 8.2.1 || true
           chmod +x gradlew 2>/dev/null || true
           if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace
+            ./gradlew assembleDebug --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "### Gradle Build Failure" >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; tail -n 50 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; exit 1)
             ./gradlew bundleRelease --stacktrace || true
           else
-            gradle assembleDebug --stacktrace
+            gradle assembleDebug --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "### Gradle Build Failure" >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; tail -n 50 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; exit 1)
             gradle bundleRelease --stacktrace || true
           fi
 
