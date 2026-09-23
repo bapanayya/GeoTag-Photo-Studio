@@ -1,4 +1,4 @@
-﻿# 🚀 Google Play Store Listing & Submission Guide: GeoTag Studio
+# 🚀 Google Play Store Listing & Submission Guide: GeoTag Studio
 
 **App Title**: `GeoTag Studio: GPS Map Camera`  
 **Package Name**: `com.geotag.photostudio`  
@@ -29,6 +29,17 @@ Add GPS map stamp, address, coordinates & EXIF metadata to photos on-device.
 
 ### 3. Full Description (Max 4000 characters)
 ```text
+🏛️ DISCLAIMER & OFFICIAL INFORMATION SOURCES:
+GeoTag Studio: GPS Map Camera is an independent utility application developed by The Competitive Edge. It is NOT an official government application, nor is it associated, affiliated, endorsed, or sponsored by any government department, educational statutory council, or public agency. Any references to college campuses, accreditation schemes, or verification formats are provided solely as productivity templates for users.
+
+Official educational and statutory portals referenced for documentation standards:
+• University Grants Commission (UGC): https://www.ugc.gov.in
+• National Assessment and Accreditation Council (NAAC): http://naac.gov.in
+• National Institutional Ranking Framework (NIRF): https://www.nirfindia.org
+• Andhra Pradesh Higher Education (APSCHE): https://apsche.ap.gov.in
+
+--------------------------------------------------
+
 GeoTag Studio: GPS Map Camera is a professional, privacy-first photo geotagging application engineered by The Competitive Edge. It allows educational institutions, college faculty, field inspectors, civil engineers, surveyors, and event organizers to add authentic visual GPS map stamps and binary EXIF metadata to photos with 100% on-device processing.
 
 Unlike conventional GIS map camera tools that stretch heavy dark bars across the entire bottom of your image and block essential subjects, GeoTag Studio features an intelligent, compact bottom-left stamp card that leaves more than 56% of the frame completely unobstructed.

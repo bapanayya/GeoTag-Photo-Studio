@@ -80,8 +80,8 @@ jobs:
           find android/app/build -name "*.apk" -o -name "*.aab" | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
-          APK_PATH=$(find android/app/build -name "*.apk" | head -n 1)
-          AAB_PATH=$(find android/app/build -name "*.aab" | head -n 1)
+          APK_PATH=$(find android/app/build/outputs/apk -name "*debug.apk" -o -name "*release*.apk" | head -n 1)
+          AAB_PATH=$(find android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
           
           echo "Selected APK: $APK_PATH" >> $GITHUB_STEP_SUMMARY
           echo "Selected AAB: $AAB_PATH" >> $GITHUB_STEP_SUMMARY
@@ -95,10 +95,13 @@ jobs:
           fi
           
           if [ -n "$AAB_PATH" ] && [ -f "$AAB_PATH" ]; then
+            echo "Signing Release AAB with production upload keystore..."
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore android/app/upload-keystore.jks -storepass geotag123 -keypass geotag123 "$AAB_PATH" geotag
+            jarsigner -verify "$AAB_PATH"
             cp "$AAB_PATH" GeoTagStudio.aab
-            echo "Copied AAB to GeoTagStudio.aab ($(ls -lh GeoTagStudio.aab | awk '{print $5}'))" >> $GITHUB_STEP_SUMMARY
+            echo "Copied signed AAB to GeoTagStudio.aab ($(ls -lh GeoTagStudio.aab | awk '{print $5}'))" >> $GITHUB_STEP_SUMMARY
           else
-            echo "ERROR: AAB not found" >> $GITHUB_STEP_SUMMARY
+            echo "ERROR: AAB not found in android/app/build/outputs/bundle/release" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
@@ -106,11 +109,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v1.0.1
-          name: "GeoTag Studio Android App v1.0.1 (Official Release)"
+          tag_name: v1.0.2
+          name: "GeoTag Studio Android App v1.0.2 (Official Release)"
           fail_on_unmatched_files: true
           body: |
-            ### 📱 GeoTag Studio Official Android Application (v1.0.1)
+            ### 📱 GeoTag Studio Official Android Application (v1.0.2)
             - **Custom GPS Map Camera & EXIF Stamping**: Privacy-first, 100% on-device photo geotagging
             - **Photo-Friendly Compact Layout**: Bottom-left compact stamp ensures photo subjects remain unblocked
             - **Interactive Mini-Map & Binary EXIF**: Embeds satellite/street mini-map and real EXIF GPS metadata
