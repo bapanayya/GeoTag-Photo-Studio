@@ -1119,9 +1119,11 @@ function calculateResponsiveMetrics(imageWidth, imageHeight, options = {}) {
   if (options.layout === 'full-width') {
     cardWidth = imageWidth - margin * 2;
   } else {
-    // Compact layout: between 38% and 46% of width, bounded reasonably
-    const idealWidth = imageWidth * (options.maxWidthRatio || 0.44);
-    cardWidth = Math.round(Math.max(280 * baseScale, Math.min(idealWidth, imageWidth * 0.65)));
+    // Compact layout: scale card proportionally with options.scale when scale > 1.0, bounded reasonably
+    const scaleMultiplier = Math.max(1.0, options.scale || 1.0);
+    const idealWidth = imageWidth * (options.maxWidthRatio || 0.44) * scaleMultiplier;
+    const maxAllowedWidth = imageWidth - margin * 2;
+    cardWidth = Math.round(Math.max(280 * baseScale, Math.min(idealWidth, maxAllowedWidth)));
   }
 
   // Map Thumbnail Dimension (square)
@@ -1406,15 +1408,54 @@ async function renderGeoTagPhoto(sourceImage, tagData = {}, userOptions = {}) {
   ctx.font = `normal ${m.subFontSize}px ${options.fontFamily}`;
   const addressLines = wrapText(ctx, addressText, contentWidth).slice(0, 2); // Max 2 lines for compact height
 
+  // Safeguard: Dynamic font downscaling & line splitting so Coordinates never overflow card width
+  let coordsFontSize = m.bodyFontSize;
+  ctx.font = `normal ${coordsFontSize}px ${options.fontFamily}`;
+  let coordsLines = [coordsText];
+  if (ctx.measureText(coordsText).width > contentWidth) {
+    const minCoordsFont = Math.max(8, Math.round(m.bodyFontSize * 0.75));
+    while (ctx.measureText(coordsText).width > contentWidth && coordsFontSize > minCoordsFont) {
+      coordsFontSize -= 0.5;
+      ctx.font = `normal ${coordsFontSize}px ${options.fontFamily}`;
+    }
+    if (ctx.measureText(coordsText).width > contentWidth) {
+      coordsLines = coordsText.includes(',')
+        ? coordsText.split(',').map((s) => s.trim())
+        : wrapText(ctx, coordsText, contentWidth);
+    }
+  }
+
+  // Safeguard: Dynamic font downscaling & line wrapping for Date & Time
+  let dateTimeFontSize = m.bodyFontSize;
+  ctx.font = `normal ${dateTimeFontSize}px ${options.fontFamily}`;
+  let dateTimeLines = [dateTimeText];
+  if (ctx.measureText(dateTimeText).width > contentWidth) {
+    const minDateFont = Math.max(8, Math.round(m.bodyFontSize * 0.75));
+    while (ctx.measureText(dateTimeText).width > contentWidth && dateTimeFontSize > minDateFont) {
+      dateTimeFontSize -= 0.5;
+      ctx.font = `normal ${dateTimeFontSize}px ${options.fontFamily}`;
+    }
+    if (ctx.measureText(dateTimeText).width > contentWidth) {
+      dateTimeLines = wrapText(ctx, dateTimeText, contentWidth);
+    }
+  }
+
+  // Safeguard: Dynamic line wrapping for Custom Note
+  let noteLines = [];
+  if (customNote) {
+    ctx.font = `italic 600 ${m.subFontSize}px ${options.fontFamily}`;
+    noteLines = wrapText(ctx, customNote, contentWidth);
+  }
+
   const lineSpacing = Math.round(m.bodyFontSize * 0.35);
 
   let textTotalHeight = 0;
   textTotalHeight += titleLines.length * (m.titleFontSize + lineSpacing);
   textTotalHeight += addressLines.length * (m.subFontSize + lineSpacing);
-  textTotalHeight += (m.bodyFontSize + lineSpacing); // coords
-  textTotalHeight += (m.bodyFontSize + lineSpacing); // dateTime
-  if (customNote) {
-    textTotalHeight += (m.subFontSize + lineSpacing);
+  textTotalHeight += coordsLines.length * (coordsFontSize + lineSpacing);
+  textTotalHeight += dateTimeLines.length * (dateTimeFontSize + lineSpacing);
+  if (noteLines.length > 0) {
+    textTotalHeight += noteLines.length * (m.subFontSize + lineSpacing);
   }
 
   // Card total height
@@ -1505,22 +1546,30 @@ async function renderGeoTagPhoto(sourceImage, tagData = {}, userOptions = {}) {
     currentY += m.subFontSize + lineSpacing;
   });
 
-  // Coordinates
+  // Coordinates (guaranteed to fit within contentWidth)
   ctx.fillStyle = options.textColor;
-  ctx.font = `normal ${m.bodyFontSize}px ${options.fontFamily}`;
-  ctx.fillText(coordsText, textStartX, currentY);
-  currentY += m.bodyFontSize + lineSpacing;
+  ctx.font = `normal ${coordsFontSize}px ${options.fontFamily}`;
+  coordsLines.forEach((line) => {
+    ctx.fillText(line, textStartX, currentY);
+    currentY += coordsFontSize + lineSpacing;
+  });
 
-  // Date & Time
+  // Date & Time (guaranteed to fit within contentWidth)
   ctx.fillStyle = options.textColor;
-  ctx.fillText(dateTimeText, textStartX, currentY);
-  currentY += m.bodyFontSize + lineSpacing;
+  ctx.font = `normal ${dateTimeFontSize}px ${options.fontFamily}`;
+  dateTimeLines.forEach((line) => {
+    ctx.fillText(line, textStartX, currentY);
+    currentY += dateTimeFontSize + lineSpacing;
+  });
 
-  // Custom Note / Organization
-  if (customNote) {
+  // Custom Note / Organization (guaranteed to fit within contentWidth)
+  if (noteLines.length > 0) {
     ctx.fillStyle = options.accentColor;
     ctx.font = `italic 600 ${m.subFontSize}px ${options.fontFamily}`;
-    ctx.fillText(customNote, textStartX, currentY);
+    noteLines.forEach((line) => {
+      ctx.fillText(line, textStartX, currentY);
+      currentY += m.subFontSize + lineSpacing;
+    });
   }
 
   ctx.restore();
@@ -1618,6 +1667,12 @@ function initDom() {
   elements.batchGallery = document.getElementById('batchGallery');
   elements.outputCanvas = document.getElementById('outputCanvas');
   elements.emptyPlaceholder = document.getElementById('emptyPlaceholder');
+  elements.canvasViewport = document.getElementById('canvasViewport');
+  elements.canvasZoomBar = document.getElementById('canvasZoomBar');
+  elements.btnZoomOut = document.getElementById('btnZoomOut');
+  elements.btnZoomIn = document.getElementById('btnZoomIn');
+  elements.btnZoomReset = document.getElementById('btnZoomReset');
+  elements.zoomPercent = document.getElementById('zoomPercent');
   elements.presetSelect = document.getElementById('presetSelect');
   elements.presetSelectSidebar = document.getElementById('presetSelectSidebar');
   elements.btnSaveFavorite = document.getElementById('btnSaveFavorite');
@@ -1923,10 +1978,12 @@ function initInitialState() {
     elements.batchGallery.innerHTML = '';
   }
   if (elements.photoMetrics) elements.photoMetrics.textContent = 'Ready for photo';
+  if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
   if (elements.btnDownload) elements.btnDownload.disabled = true;
   if (elements.btnShare) elements.btnShare.disabled = true;
   if (elements.btnDownloadZip) elements.btnDownloadZip.style.display = 'none';
   if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
+  resetCanvasZoom();
   syncStateToInputs();
 }
 
@@ -2071,6 +2128,7 @@ async function performRender() {
       if (ctx) ctx.clearRect(0, 0, elements.outputCanvas.width, elements.outputCanvas.height);
     }
     if (elements.photoMetrics) elements.photoMetrics.textContent = 'Ready for photo';
+    if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
     if (elements.btnDownload) elements.btnDownload.disabled = true;
     if (elements.btnShare) elements.btnShare.disabled = true;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
@@ -2079,6 +2137,7 @@ async function performRender() {
   const currentPhoto = state.photos[state.activePhotoIndex];
   if (!currentPhoto || !currentPhoto.img) {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
     if (elements.outputCanvas) {
       elements.outputCanvas.style.display = 'none';
       const ctx = elements.outputCanvas.getContext('2d');
@@ -2096,6 +2155,7 @@ async function performRender() {
     // Show output canvas, hide empty placeholder, and enable download/share
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
     if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
+    if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'flex';
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
@@ -2106,6 +2166,8 @@ async function performRender() {
     const ctx = elements.outputCanvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(canvas, 0, 0);
+
+    applyCanvasZoom();
 
     // Update Metrics Badge
     if (elements.photoMetrics) {
@@ -2432,9 +2494,184 @@ function snapWebcamPhoto() {
 }
 
 /**
+ * Canvas Zoom & Pan Controller
+ */
+const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
+let currentZoomIndex = 2; // Index of 1.0 (Fit mode)
+let isFitMode = true;
+
+function setZoomIndex(index) {
+  currentZoomIndex = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, index));
+  isFitMode = (currentZoomIndex === 2);
+  applyCanvasZoom();
+}
+
+function zoomIn() {
+  if (isFitMode) {
+    setZoomIndex(3); // 125%
+  } else {
+    setZoomIndex(currentZoomIndex + 1);
+  }
+}
+
+function zoomOut() {
+  if (isFitMode) {
+    setZoomIndex(1); // 75%
+  } else {
+    setZoomIndex(currentZoomIndex - 1);
+  }
+}
+
+function resetCanvasZoom() {
+  isFitMode = true;
+  currentZoomIndex = 2;
+  applyCanvasZoom();
+}
+
+function applyCanvasZoom() {
+  if (!elements.outputCanvas || state.photos.length === 0) return;
+
+  if (isFitMode) {
+    elements.outputCanvas.style.width = '';
+    elements.outputCanvas.style.height = '';
+    elements.outputCanvas.style.maxWidth = '100%';
+    elements.outputCanvas.style.maxHeight = '100%';
+    elements.outputCanvas.classList.remove('is-zoomed');
+    if (elements.zoomPercent) elements.zoomPercent.textContent = 'Fit';
+  } else {
+    const factor = ZOOM_LEVELS[currentZoomIndex];
+    const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
+    const vw = viewport ? Math.max(200, viewport.clientWidth - 40) : 800;
+    const vh = viewport ? Math.max(200, viewport.clientHeight - 40) : 600;
+
+    const natW = elements.outputCanvas.width || 1200;
+    const natH = elements.outputCanvas.height || 900;
+    const canvasAspect = natW / (natH || 1);
+    const vpAspect = vw / vh;
+
+    let fitW, fitH;
+    if (canvasAspect > vpAspect) {
+      fitW = Math.min(vw, natW);
+      fitH = fitW / canvasAspect;
+    } else {
+      fitH = Math.min(vh, natH);
+      fitW = fitH * canvasAspect;
+    }
+
+    const targetW = Math.round(fitW * factor);
+    const targetH = Math.round(fitH * factor);
+
+    elements.outputCanvas.style.maxWidth = 'none';
+    elements.outputCanvas.style.maxHeight = 'none';
+    elements.outputCanvas.style.width = `${targetW}px`;
+    elements.outputCanvas.style.height = `${targetH}px`;
+    elements.outputCanvas.classList.add('is-zoomed');
+    if (elements.zoomPercent) elements.zoomPercent.textContent = `${Math.round(factor * 100)}%`;
+  }
+}
+
+function initCanvasPanAndZoomEvents() {
+  if (elements.btnZoomIn) elements.btnZoomIn.addEventListener('click', zoomIn);
+  if (elements.btnZoomOut) elements.btnZoomOut.addEventListener('click', zoomOut);
+  if (elements.btnZoomReset) elements.btnZoomReset.addEventListener('click', resetCanvasZoom);
+
+  // Double click canvas to toggle between Fit and 150%
+  if (elements.outputCanvas) {
+    elements.outputCanvas.addEventListener('dblclick', () => {
+      if (state.photos.length === 0) return;
+      if (isFitMode) {
+        setZoomIndex(4); // 1.5 (150%)
+      } else {
+        resetCanvasZoom();
+      }
+    });
+  }
+
+  // Mouse wheel zoom inside viewport
+  const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
+  if (viewport) {
+    viewport.addEventListener('wheel', (e) => {
+      if (state.photos.length === 0) return;
+      if (e.ctrlKey || Math.abs(e.deltaY) > 0) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          zoomIn();
+        } else {
+          zoomOut();
+        }
+      }
+    }, { passive: false });
+
+    // Drag-to-pan when zoomed
+    let isPanning = false;
+    let startX = 0, startY = 0;
+    let scrollLeft = 0, scrollTop = 0;
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (isFitMode || state.photos.length === 0) return;
+      if (e.target.closest('.canvas-zoom-bar')) return;
+      isPanning = true;
+      startX = e.pageX - viewport.offsetLeft;
+      startY = e.pageY - viewport.offsetTop;
+      scrollLeft = viewport.scrollLeft;
+      scrollTop = viewport.scrollTop;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      e.preventDefault();
+      const x = e.pageX - viewport.offsetLeft;
+      const y = e.pageY - viewport.offsetTop;
+      const walkX = (x - startX);
+      const walkY = (y - startY);
+      viewport.scrollLeft = scrollLeft - walkX;
+      viewport.scrollTop = scrollTop - walkY;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+
+    // Mobile touch pinch-to-zoom
+    let initialTouchDist = null;
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialTouchDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialTouchDist !== null) {
+        const currentDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        const diff = currentDist - initialTouchDist;
+        if (diff > 35) {
+          zoomIn();
+          initialTouchDist = currentDist;
+        } else if (diff < -35) {
+          zoomOut();
+          initialTouchDist = currentDist;
+        }
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', () => {
+      initialTouchDist = null;
+    }, { passive: true });
+  }
+}
+
+/**
  * Event Listeners Setup
  */
 function setupEvents() {
+  initCanvasPanAndZoomEvents();
+
   // Preset Selectors (Header & Sidebar)
   if (elements.presetSelect) {
     elements.presetSelect.addEventListener('change', (e) => {

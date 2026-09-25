@@ -32,4 +32,16 @@ const metricsFullWidth = calculateResponsiveMetrics(1024, 575, { layout: 'full-w
 const unreducedMapSize = Math.round(metricsFullWidth.cardWidth * 0.196);
 assert.strictEqual(metricsFullWidth.mapSize, Math.round(unreducedMapSize * 0.40), 'Full-width map should be reduced by 60% (retaining 40%)');
 
+// Test 6: Stamp scale > 1.0 (e.g. 1.3 = 130%) expands card width proportionally without exceeding photo width
+const metricsScale130 = calculateResponsiveMetrics(1920, 1080, { layout: 'compact-left', scale: 1.3 });
+assert(metricsScale130.cardWidth > metricsFHD.cardWidth, 'Card width at 130% scale should be wider than at 100% scale');
+assert(metricsScale130.cardWidth <= 1920 - metricsScale130.margin * 2, 'Card width should never exceed image bounds');
+
+// Test 7: Coords splitting test when long
+const mockLongCoords = "Lat 13° 44' 38.7\" N, Long 79° 42' 33.9\" E";
+const coordsSplit = mockLongCoords.split(',').map((s) => s.trim());
+assert.strictEqual(coordsSplit.length, 2, 'Coordinates split should have Lat and Long parts');
+assert.strictEqual(coordsSplit[0], "Lat 13° 44' 38.7\" N");
+assert.strictEqual(coordsSplit[1], "Long 79° 42' 33.9\" E");
+
 console.log('✅ All GeoTag Engine Layout & Scaling tests passed successfully!');

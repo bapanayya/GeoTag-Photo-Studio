@@ -54,9 +54,11 @@ export function calculateResponsiveMetrics(imageWidth, imageHeight, options = {}
   if (options.layout === 'full-width') {
     cardWidth = imageWidth - margin * 2;
   } else {
-    // Compact layout: between 38% and 46% of width, bounded reasonably
-    const idealWidth = imageWidth * (options.maxWidthRatio || 0.44);
-    cardWidth = Math.round(Math.max(280 * baseScale, Math.min(idealWidth, imageWidth * 0.65)));
+    // Compact layout: scale card proportionally with options.scale when scale > 1.0, bounded reasonably
+    const scaleMultiplier = Math.max(1.0, options.scale || 1.0);
+    const idealWidth = imageWidth * (options.maxWidthRatio || 0.44) * scaleMultiplier;
+    const maxAllowedWidth = imageWidth - margin * 2;
+    cardWidth = Math.round(Math.max(280 * baseScale, Math.min(idealWidth, maxAllowedWidth)));
   }
 
   // Map Thumbnail Dimension (square)
@@ -341,15 +343,54 @@ export async function renderGeoTagPhoto(sourceImage, tagData = {}, userOptions =
   ctx.font = `normal ${m.subFontSize}px ${options.fontFamily}`;
   const addressLines = wrapText(ctx, addressText, contentWidth).slice(0, 2); // Max 2 lines for compact height
 
+  // Safeguard: Dynamic font downscaling & line splitting so Coordinates never overflow card width
+  let coordsFontSize = m.bodyFontSize;
+  ctx.font = `normal ${coordsFontSize}px ${options.fontFamily}`;
+  let coordsLines = [coordsText];
+  if (ctx.measureText(coordsText).width > contentWidth) {
+    const minCoordsFont = Math.max(8, Math.round(m.bodyFontSize * 0.75));
+    while (ctx.measureText(coordsText).width > contentWidth && coordsFontSize > minCoordsFont) {
+      coordsFontSize -= 0.5;
+      ctx.font = `normal ${coordsFontSize}px ${options.fontFamily}`;
+    }
+    if (ctx.measureText(coordsText).width > contentWidth) {
+      coordsLines = coordsText.includes(',')
+        ? coordsText.split(',').map((s) => s.trim())
+        : wrapText(ctx, coordsText, contentWidth);
+    }
+  }
+
+  // Safeguard: Dynamic font downscaling & line wrapping for Date & Time
+  let dateTimeFontSize = m.bodyFontSize;
+  ctx.font = `normal ${dateTimeFontSize}px ${options.fontFamily}`;
+  let dateTimeLines = [dateTimeText];
+  if (ctx.measureText(dateTimeText).width > contentWidth) {
+    const minDateFont = Math.max(8, Math.round(m.bodyFontSize * 0.75));
+    while (ctx.measureText(dateTimeText).width > contentWidth && dateTimeFontSize > minDateFont) {
+      dateTimeFontSize -= 0.5;
+      ctx.font = `normal ${dateTimeFontSize}px ${options.fontFamily}`;
+    }
+    if (ctx.measureText(dateTimeText).width > contentWidth) {
+      dateTimeLines = wrapText(ctx, dateTimeText, contentWidth);
+    }
+  }
+
+  // Safeguard: Dynamic line wrapping for Custom Note
+  let noteLines = [];
+  if (customNote) {
+    ctx.font = `italic 600 ${m.subFontSize}px ${options.fontFamily}`;
+    noteLines = wrapText(ctx, customNote, contentWidth);
+  }
+
   const lineSpacing = Math.round(m.bodyFontSize * 0.35);
 
   let textTotalHeight = 0;
   textTotalHeight += titleLines.length * (m.titleFontSize + lineSpacing);
   textTotalHeight += addressLines.length * (m.subFontSize + lineSpacing);
-  textTotalHeight += (m.bodyFontSize + lineSpacing); // coords
-  textTotalHeight += (m.bodyFontSize + lineSpacing); // dateTime
-  if (customNote) {
-    textTotalHeight += (m.subFontSize + lineSpacing);
+  textTotalHeight += coordsLines.length * (coordsFontSize + lineSpacing);
+  textTotalHeight += dateTimeLines.length * (dateTimeFontSize + lineSpacing);
+  if (noteLines.length > 0) {
+    textTotalHeight += noteLines.length * (m.subFontSize + lineSpacing);
   }
 
   // Card total height
@@ -440,22 +481,30 @@ export async function renderGeoTagPhoto(sourceImage, tagData = {}, userOptions =
     currentY += m.subFontSize + lineSpacing;
   });
 
-  // Coordinates
+  // Coordinates (guaranteed to fit within contentWidth)
   ctx.fillStyle = options.textColor;
-  ctx.font = `normal ${m.bodyFontSize}px ${options.fontFamily}`;
-  ctx.fillText(coordsText, textStartX, currentY);
-  currentY += m.bodyFontSize + lineSpacing;
+  ctx.font = `normal ${coordsFontSize}px ${options.fontFamily}`;
+  coordsLines.forEach((line) => {
+    ctx.fillText(line, textStartX, currentY);
+    currentY += coordsFontSize + lineSpacing;
+  });
 
-  // Date & Time
+  // Date & Time (guaranteed to fit within contentWidth)
   ctx.fillStyle = options.textColor;
-  ctx.fillText(dateTimeText, textStartX, currentY);
-  currentY += m.bodyFontSize + lineSpacing;
+  ctx.font = `normal ${dateTimeFontSize}px ${options.fontFamily}`;
+  dateTimeLines.forEach((line) => {
+    ctx.fillText(line, textStartX, currentY);
+    currentY += dateTimeFontSize + lineSpacing;
+  });
 
-  // Custom Note / Organization
-  if (customNote) {
+  // Custom Note / Organization (guaranteed to fit within contentWidth)
+  if (noteLines.length > 0) {
     ctx.fillStyle = options.accentColor;
     ctx.font = `italic 600 ${m.subFontSize}px ${options.fontFamily}`;
-    ctx.fillText(customNote, textStartX, currentY);
+    noteLines.forEach((line) => {
+      ctx.fillText(line, textStartX, currentY);
+      currentY += m.subFontSize + lineSpacing;
+    });
   }
 
   ctx.restore();

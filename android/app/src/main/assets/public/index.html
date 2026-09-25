@@ -301,7 +301,15 @@
         </div>
 
         <!-- Canvas Viewport -->
-        <div class="canvas-viewport">
+        <div class="canvas-viewport" id="canvasViewport">
+          <!-- Canvas Floating Zoom Bar -->
+          <div class="canvas-zoom-bar" id="canvasZoomBar" style="display:none;" aria-label="Photo Zoom Controls">
+            <button type="button" id="btnZoomOut" class="btn-canvas-zoom" title="Zoom Out (Ctrl -)">🔍−</button>
+            <span class="zoom-percent" id="zoomPercent">Fit</span>
+            <button type="button" id="btnZoomIn" class="btn-canvas-zoom" title="Zoom In (Ctrl +)">🔍+</button>
+            <button type="button" id="btnZoomReset" class="btn-canvas-zoom btn-zoom-reset" title="Fit to Screen">Fit</button>
+          </div>
+
           <div id="emptyPlaceholder" class="empty-placeholder">
             <div class="empty-icon">📍</div>
             <h2 class="empty-title">No Photo Loaded Yet</h2>

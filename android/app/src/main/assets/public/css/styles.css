@@ -1052,6 +1052,76 @@ input:checked + .slider:before {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
+  transition: width 0.15s ease, height 0.15s ease;
+}
+
+/* Canvas Floating Zoom Bar */
+.canvas-zoom-bar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 5px 8px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  z-index: 25;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.btn-canvas-zoom {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-canvas-zoom:hover {
+  background: var(--accent-primary);
+  color: #0f172a;
+  border-color: var(--accent-primary);
+}
+
+.btn-canvas-zoom:active {
+  transform: scale(0.95);
+}
+
+.btn-zoom-reset {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.zoom-percent {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #38bdf8;
+  min-width: 42px;
+  text-align: center;
+  padding: 0 3px;
+}
+
+#outputCanvas.is-zoomed {
+  cursor: grab;
+  margin: auto;
+}
+
+#outputCanvas.is-zoomed:active {
+  cursor: grabbing;
 }
 
 /* Empty Placeholder State */

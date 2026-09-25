@@ -60,6 +60,12 @@ function initDom() {
   elements.batchGallery = document.getElementById('batchGallery');
   elements.outputCanvas = document.getElementById('outputCanvas');
   elements.emptyPlaceholder = document.getElementById('emptyPlaceholder');
+  elements.canvasViewport = document.getElementById('canvasViewport');
+  elements.canvasZoomBar = document.getElementById('canvasZoomBar');
+  elements.btnZoomOut = document.getElementById('btnZoomOut');
+  elements.btnZoomIn = document.getElementById('btnZoomIn');
+  elements.btnZoomReset = document.getElementById('btnZoomReset');
+  elements.zoomPercent = document.getElementById('zoomPercent');
   elements.presetSelect = document.getElementById('presetSelect');
   elements.presetSelectSidebar = document.getElementById('presetSelectSidebar');
   elements.btnSaveFavorite = document.getElementById('btnSaveFavorite');
@@ -365,10 +371,12 @@ function initInitialState() {
     elements.batchGallery.innerHTML = '';
   }
   if (elements.photoMetrics) elements.photoMetrics.textContent = 'Ready for photo';
+  if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
   if (elements.btnDownload) elements.btnDownload.disabled = true;
   if (elements.btnShare) elements.btnShare.disabled = true;
   if (elements.btnDownloadZip) elements.btnDownloadZip.style.display = 'none';
   if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
+  resetCanvasZoom();
   syncStateToInputs();
 }
 
@@ -513,6 +521,7 @@ async function performRender() {
       if (ctx) ctx.clearRect(0, 0, elements.outputCanvas.width, elements.outputCanvas.height);
     }
     if (elements.photoMetrics) elements.photoMetrics.textContent = 'Ready for photo';
+    if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
     if (elements.btnDownload) elements.btnDownload.disabled = true;
     if (elements.btnShare) elements.btnShare.disabled = true;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
@@ -521,6 +530,7 @@ async function performRender() {
   const currentPhoto = state.photos[state.activePhotoIndex];
   if (!currentPhoto || !currentPhoto.img) {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
     if (elements.outputCanvas) {
       elements.outputCanvas.style.display = 'none';
       const ctx = elements.outputCanvas.getContext('2d');
@@ -538,6 +548,7 @@ async function performRender() {
     // Show output canvas, hide empty placeholder, and enable download/share
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
     if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
+    if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'flex';
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
@@ -548,6 +559,8 @@ async function performRender() {
     const ctx = elements.outputCanvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(canvas, 0, 0);
+
+    applyCanvasZoom();
 
     // Update Metrics Badge
     if (elements.photoMetrics) {
@@ -874,9 +887,184 @@ function snapWebcamPhoto() {
 }
 
 /**
+ * Canvas Zoom & Pan Controller
+ */
+const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
+let currentZoomIndex = 2; // Index of 1.0 (Fit mode)
+let isFitMode = true;
+
+function setZoomIndex(index) {
+  currentZoomIndex = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, index));
+  isFitMode = (currentZoomIndex === 2);
+  applyCanvasZoom();
+}
+
+function zoomIn() {
+  if (isFitMode) {
+    setZoomIndex(3); // 125%
+  } else {
+    setZoomIndex(currentZoomIndex + 1);
+  }
+}
+
+function zoomOut() {
+  if (isFitMode) {
+    setZoomIndex(1); // 75%
+  } else {
+    setZoomIndex(currentZoomIndex - 1);
+  }
+}
+
+function resetCanvasZoom() {
+  isFitMode = true;
+  currentZoomIndex = 2;
+  applyCanvasZoom();
+}
+
+function applyCanvasZoom() {
+  if (!elements.outputCanvas || state.photos.length === 0) return;
+
+  if (isFitMode) {
+    elements.outputCanvas.style.width = '';
+    elements.outputCanvas.style.height = '';
+    elements.outputCanvas.style.maxWidth = '100%';
+    elements.outputCanvas.style.maxHeight = '100%';
+    elements.outputCanvas.classList.remove('is-zoomed');
+    if (elements.zoomPercent) elements.zoomPercent.textContent = 'Fit';
+  } else {
+    const factor = ZOOM_LEVELS[currentZoomIndex];
+    const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
+    const vw = viewport ? Math.max(200, viewport.clientWidth - 40) : 800;
+    const vh = viewport ? Math.max(200, viewport.clientHeight - 40) : 600;
+
+    const natW = elements.outputCanvas.width || 1200;
+    const natH = elements.outputCanvas.height || 900;
+    const canvasAspect = natW / (natH || 1);
+    const vpAspect = vw / vh;
+
+    let fitW, fitH;
+    if (canvasAspect > vpAspect) {
+      fitW = Math.min(vw, natW);
+      fitH = fitW / canvasAspect;
+    } else {
+      fitH = Math.min(vh, natH);
+      fitW = fitH * canvasAspect;
+    }
+
+    const targetW = Math.round(fitW * factor);
+    const targetH = Math.round(fitH * factor);
+
+    elements.outputCanvas.style.maxWidth = 'none';
+    elements.outputCanvas.style.maxHeight = 'none';
+    elements.outputCanvas.style.width = `${targetW}px`;
+    elements.outputCanvas.style.height = `${targetH}px`;
+    elements.outputCanvas.classList.add('is-zoomed');
+    if (elements.zoomPercent) elements.zoomPercent.textContent = `${Math.round(factor * 100)}%`;
+  }
+}
+
+function initCanvasPanAndZoomEvents() {
+  if (elements.btnZoomIn) elements.btnZoomIn.addEventListener('click', zoomIn);
+  if (elements.btnZoomOut) elements.btnZoomOut.addEventListener('click', zoomOut);
+  if (elements.btnZoomReset) elements.btnZoomReset.addEventListener('click', resetCanvasZoom);
+
+  // Double click canvas to toggle between Fit and 150%
+  if (elements.outputCanvas) {
+    elements.outputCanvas.addEventListener('dblclick', () => {
+      if (state.photos.length === 0) return;
+      if (isFitMode) {
+        setZoomIndex(4); // 1.5 (150%)
+      } else {
+        resetCanvasZoom();
+      }
+    });
+  }
+
+  // Mouse wheel zoom inside viewport
+  const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
+  if (viewport) {
+    viewport.addEventListener('wheel', (e) => {
+      if (state.photos.length === 0) return;
+      if (e.ctrlKey || Math.abs(e.deltaY) > 0) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          zoomIn();
+        } else {
+          zoomOut();
+        }
+      }
+    }, { passive: false });
+
+    // Drag-to-pan when zoomed
+    let isPanning = false;
+    let startX = 0, startY = 0;
+    let scrollLeft = 0, scrollTop = 0;
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (isFitMode || state.photos.length === 0) return;
+      if (e.target.closest('.canvas-zoom-bar')) return;
+      isPanning = true;
+      startX = e.pageX - viewport.offsetLeft;
+      startY = e.pageY - viewport.offsetTop;
+      scrollLeft = viewport.scrollLeft;
+      scrollTop = viewport.scrollTop;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      e.preventDefault();
+      const x = e.pageX - viewport.offsetLeft;
+      const y = e.pageY - viewport.offsetTop;
+      const walkX = (x - startX);
+      const walkY = (y - startY);
+      viewport.scrollLeft = scrollLeft - walkX;
+      viewport.scrollTop = scrollTop - walkY;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+
+    // Mobile touch pinch-to-zoom
+    let initialTouchDist = null;
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialTouchDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialTouchDist !== null) {
+        const currentDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        const diff = currentDist - initialTouchDist;
+        if (diff > 35) {
+          zoomIn();
+          initialTouchDist = currentDist;
+        } else if (diff < -35) {
+          zoomOut();
+          initialTouchDist = currentDist;
+        }
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', () => {
+      initialTouchDist = null;
+    }, { passive: true });
+  }
+}
+
+/**
  * Event Listeners Setup
  */
 function setupEvents() {
+  initCanvasPanAndZoomEvents();
+
   // Preset Selectors (Header & Sidebar)
   if (elements.presetSelect) {
     elements.presetSelect.addEventListener('change', (e) => {
