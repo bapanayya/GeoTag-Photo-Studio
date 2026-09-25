@@ -122,6 +122,22 @@ function initDom() {
   elements.tabIphone = document.getElementById('tabIphone');
   elements.guideDesktop = document.getElementById('guideDesktop');
   elements.guideIphone = document.getElementById('guideIphone');
+  elements.appFooter = document.getElementById('appFooter');
+
+  // Handle mobile visualViewport resize to dynamically hide footer when keypad pops up
+  if (typeof window !== 'undefined' && window.visualViewport) {
+    const handleViewportChange = () => {
+      const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
+      if (isKeyboardOpen) {
+        document.body.classList.add('keyboard-open');
+        if (elements.appFooter) elements.appFooter.style.display = 'none';
+      } else if (!document.body.classList.contains('search-active')) {
+        document.body.classList.remove('keyboard-open');
+        if (elements.appFooter) elements.appFooter.style.display = '';
+      }
+    };
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+  }
 }
 
 /**
@@ -1008,6 +1024,20 @@ function setupEvents() {
   let currentSearchId = 0;
   let remoteAbortController = null;
 
+  const hideSearchResults = () => {
+    if (elements.searchResults) elements.searchResults.style.display = 'none';
+    document.body.classList.remove('search-active');
+    if (elements.appFooter && !document.body.classList.contains('keyboard-open')) {
+      elements.appFooter.style.display = '';
+    }
+  };
+
+  const showSearchResults = () => {
+    if (elements.searchResults) elements.searchResults.style.display = 'block';
+    document.body.classList.add('search-active');
+    if (elements.appFooter) elements.appFooter.style.display = 'none';
+  };
+
   const renderSearchResults = (results, isSearchingRemote = false) => {
     elements.searchResults.innerHTML = '';
     if (results.length > 0) {
@@ -1034,7 +1064,7 @@ function setupEvents() {
           if (r.customNote) state.tagData.customNote = r.customNote;
           if (r.badgeText) state.options.badgeText = r.badgeText;
           elements.inputSearch.value = r.name || r.title;
-          elements.searchResults.style.display = 'none';
+          hideSearchResults();
           if (elements.btnClearSearch) elements.btnClearSearch.style.display = 'block';
           syncStateToInputs();
           triggerRender();
@@ -1051,7 +1081,7 @@ function setupEvents() {
         status.innerHTML = `<span class="search-status-spinner">🔄</span><span>Searching online map for more places...</span>`;
         elements.searchResults.appendChild(status);
       }
-      elements.searchResults.style.display = 'block';
+      showSearchResults();
     } else if (isSearchingRemote) {
       elements.searchResults.innerHTML = `
         <div class="search-status-bar">
@@ -1059,7 +1089,7 @@ function setupEvents() {
           <span>Searching colleges, landmarks & places for "<strong>${elements.inputSearch.value.trim()}</strong>"...</span>
         </div>
       `;
-      elements.searchResults.style.display = 'block';
+      showSearchResults();
     }
   };
 
@@ -1070,7 +1100,7 @@ function setupEvents() {
     }
 
     if (q.length < 2) {
-      elements.searchResults.style.display = 'none';
+      hideSearchResults();
       if (remoteAbortController) remoteAbortController.abort();
       return;
     }
@@ -1115,7 +1145,7 @@ function setupEvents() {
           btnUse.onclick = (e) => {
             e.stopPropagation();
             state.tagData.title = q;
-            elements.searchResults.style.display = 'none';
+            hideSearchResults();
             syncStateToInputs();
             triggerRender();
             showToast(`Location title set to: ${q}`, 'info');
@@ -1125,11 +1155,11 @@ function setupEvents() {
         if (btnMap) {
           btnMap.onclick = (e) => {
             e.stopPropagation();
-            elements.searchResults.style.display = 'none';
+            hideSearchResults();
             openMapModal();
           };
         }
-        elements.searchResults.style.display = 'block';
+        showSearchResults();
       }
     } catch (err) {
       if (searchId !== currentSearchId) return;
@@ -1148,12 +1178,12 @@ function setupEvents() {
         if (btnUseErr) {
           btnUseErr.onclick = () => {
             state.tagData.title = q;
-            elements.searchResults.style.display = 'none';
+            hideSearchResults();
             syncStateToInputs();
             triggerRender();
           };
         }
-        elements.searchResults.style.display = 'block';
+        showSearchResults();
       }
     }
   };
@@ -1175,14 +1205,24 @@ function setupEvents() {
           executeSearch();
         }
       } else if (e.key === 'Escape') {
-        elements.searchResults.style.display = 'none';
+        hideSearchResults();
       }
     });
 
     elements.inputSearch.addEventListener('focus', () => {
+      document.body.classList.add('search-active');
+      if (elements.appFooter) elements.appFooter.style.display = 'none';
       if (elements.inputSearch.value.trim().length >= 2) {
         executeSearch();
       }
+    });
+
+    elements.inputSearch.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement !== elements.inputSearch && (!elements.searchResults || elements.searchResults.style.display === 'none')) {
+          hideSearchResults();
+        }
+      }, 250);
     });
   }
 
@@ -1190,14 +1230,14 @@ function setupEvents() {
     elements.btnClearSearch.addEventListener('click', () => {
       elements.inputSearch.value = '';
       elements.btnClearSearch.style.display = 'none';
-      elements.searchResults.style.display = 'none';
+      hideSearchResults();
       elements.inputSearch.focus();
     });
   }
 
   document.addEventListener('click', (e) => {
     if (elements.searchResults && !elements.searchResults.contains(e.target) && e.target !== elements.inputSearch) {
-      elements.searchResults.style.display = 'none';
+      hideSearchResults();
     }
   });
 

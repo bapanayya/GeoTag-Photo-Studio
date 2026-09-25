@@ -110,11 +110,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v1.0.4
-          name: "GeoTag Studio Android App v1.0.4 (Official Release)"
+          tag_name: v1.0.5
+          name: "GeoTag Studio Android App v1.0.5 (Official Release)"
           fail_on_unmatched_files: true
           body: |
-            ### 📱 GeoTag Studio Official Android Application (v1.0.4)
+            ### 📱 GeoTag Studio Official Android Application (v1.0.5)
             - **Native Android Bridge**: Full native Downloads to phone storage via modern MediaStore (zero sensitive permissions required).
             - **Native Share Sheet**: Native Android sharing drawer support for WhatsApp, Telegram, Gmail, Drive, etc.
             - **Native Camera Capture**: Direct integration with device camera for crisp photo uploads.
