@@ -12,6 +12,8 @@ import {
   formatGpsDateTime,
   reverseGeocode,
   searchLocation,
+  searchLocationLocal,
+  searchLocationRemote,
   getCurrentPosition,
   encodePlusCode
 } from '../core/geo-lookup.js';
@@ -1004,6 +1006,62 @@ function setupEvents() {
   // Location Search Bar with instant local matching
   // Location Search Bar with instant local matching & interactive feedback
   let currentSearchId = 0;
+  let remoteAbortController = null;
+
+  const renderSearchResults = (results, isSearchingRemote = false) => {
+    elements.searchResults.innerHTML = '';
+    if (results.length > 0) {
+      results.forEach((r) => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        const badgeHtml = r.source ? `<span class="search-item-badge">${r.source}</span>` : '';
+        item.innerHTML = `
+          <div class="search-item-header">
+            <span class="search-item-name">📍 ${r.name || r.title}</span>
+            ${badgeHtml}
+          </div>
+          <div class="search-item-address">${r.displayName || r.address}</div>
+        `;
+        const selectItem = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          state.tagData.title = r.title || r.name;
+          state.tagData.address = r.address || r.displayName;
+          state.tagData.lat = r.lat;
+          state.tagData.lng = r.lng;
+          if (r.customNote) state.tagData.customNote = r.customNote;
+          if (r.badgeText) state.options.badgeText = r.badgeText;
+          elements.inputSearch.value = r.name || r.title;
+          elements.searchResults.style.display = 'none';
+          if (elements.btnClearSearch) elements.btnClearSearch.style.display = 'block';
+          syncStateToInputs();
+          triggerRender();
+          showToast(`Location set: ${r.name || r.title}`, 'success');
+        };
+        item.addEventListener('mousedown', (e) => e.preventDefault());
+        item.addEventListener('click', selectItem);
+        elements.searchResults.appendChild(item);
+      });
+
+      if (isSearchingRemote) {
+        const status = document.createElement('div');
+        status.className = 'search-status-bar';
+        status.innerHTML = `<span class="search-status-spinner">🔄</span><span>Searching online map for more places...</span>`;
+        elements.searchResults.appendChild(status);
+      }
+      elements.searchResults.style.display = 'block';
+    } else if (isSearchingRemote) {
+      elements.searchResults.innerHTML = `
+        <div class="search-status-bar">
+          <span class="search-status-spinner">🔄</span>
+          <span>Searching colleges, landmarks & places for "<strong>${elements.inputSearch.value.trim()}</strong>"...</span>
+        </div>
+      `;
+      elements.searchResults.style.display = 'block';
+    }
+  };
 
   const executeSearch = async () => {
     const q = elements.inputSearch.value.trim();
@@ -1013,57 +1071,30 @@ function setupEvents() {
 
     if (q.length < 2) {
       elements.searchResults.style.display = 'none';
+      if (remoteAbortController) remoteAbortController.abort();
       return;
     }
 
     const searchId = ++currentSearchId;
+    if (remoteAbortController) remoteAbortController.abort();
+    remoteAbortController = new AbortController();
 
-    // 1. Show immediate interactive loading state
-    elements.searchResults.innerHTML = `
-      <div class="search-status-bar">
-        <span class="search-status-spinner">🔄</span>
-        <span>Searching colleges, landmarks & places for "<strong>${q}</strong>"...</span>
-      </div>
-    `;
-    elements.searchResults.style.display = 'block';
+    // 1. Instant 0ms local search
+    const localMatches = searchLocationLocal(q);
+    renderSearchResults(localMatches, true);
 
     try {
-      const results = await searchLocation(q);
-
-      // Guard against race conditions from newer keystrokes
+      const remoteMatches = await searchLocationRemote(q, remoteAbortController.signal);
       if (searchId !== currentSearchId) return;
 
-      elements.searchResults.innerHTML = '';
+      const combined = [...localMatches];
+      remoteMatches.forEach((rm) => {
+        const isDup = combined.some(cm => Math.abs(cm.lat - rm.lat) < 0.0015 && Math.abs(cm.lng - rm.lng) < 0.0015);
+        if (!isDup) combined.push(rm);
+      });
 
-      if (results.length > 0) {
-        results.forEach((r) => {
-          const item = document.createElement('div');
-          item.className = 'search-result-item';
-          const badgeHtml = r.source ? `<span class="search-item-badge">${r.source}</span>` : '';
-          item.innerHTML = `
-            <div class="search-item-header">
-              <span class="search-item-name">📍 ${r.name || r.title}</span>
-              ${badgeHtml}
-            </div>
-            <div class="search-item-address">${r.displayName || r.address}</div>
-          `;
-          item.onclick = () => {
-            state.tagData.title = r.title || r.name;
-            state.tagData.address = r.address || r.displayName;
-            state.tagData.lat = r.lat;
-            state.tagData.lng = r.lng;
-            if (r.customNote) state.tagData.customNote = r.customNote;
-            if (r.badgeText) state.options.badgeText = r.badgeText;
-            elements.inputSearch.value = r.name || r.title;
-            elements.searchResults.style.display = 'none';
-            if (elements.btnClearSearch) elements.btnClearSearch.style.display = 'block';
-            syncStateToInputs();
-            triggerRender();
-            showToast(`Location set: ${r.name || r.title}`, 'success');
-          };
-          elements.searchResults.appendChild(item);
-        });
-        elements.searchResults.style.display = 'block';
+      if (combined.length > 0) {
+        renderSearchResults(combined, false);
       } else {
         // Fallback state when no exact database matches found
         elements.searchResults.innerHTML = `
@@ -1102,24 +1133,28 @@ function setupEvents() {
       }
     } catch (err) {
       if (searchId !== currentSearchId) return;
-      elements.searchResults.innerHTML = `
-        <div class="search-no-results">
-          <p>⚠️ Search error or offline</p>
-          <button type="button" class="btn-search-fallback" id="btnUseQueryAsTitleErr">
-            📍 Use "${q}" as Location Title
-          </button>
-        </div>
-      `;
-      const btnUseErr = elements.searchResults.querySelector('#btnUseQueryAsTitleErr');
-      if (btnUseErr) {
-        btnUseErr.onclick = () => {
-          state.tagData.title = q;
-          elements.searchResults.style.display = 'none';
-          syncStateToInputs();
-          triggerRender();
-        };
+      if (localMatches.length > 0) {
+        renderSearchResults(localMatches, false);
+      } else {
+        elements.searchResults.innerHTML = `
+          <div class="search-no-results">
+            <p>⚠️ Search error or offline</p>
+            <button type="button" class="btn-search-fallback" id="btnUseQueryAsTitleErr">
+              📍 Use "${q}" as Location Title
+            </button>
+          </div>
+        `;
+        const btnUseErr = elements.searchResults.querySelector('#btnUseQueryAsTitleErr');
+        if (btnUseErr) {
+          btnUseErr.onclick = () => {
+            state.tagData.title = q;
+            elements.searchResults.style.display = 'none';
+            syncStateToInputs();
+            triggerRender();
+          };
+        }
+        elements.searchResults.style.display = 'block';
       }
-      elements.searchResults.style.display = 'block';
     }
   };
 
@@ -1295,6 +1330,25 @@ function registerServiceWorker() {
   }
 }
 
+// Convert dataURL to Blob safely without network fetch
+function dataURLtoBlob(dataurl) {
+  try {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  } catch (e) {
+    console.error('Error decoding dataURLtoBlob:', e);
+    return null;
+  }
+}
+
 // Initial Bootstrapping
 window.addEventListener('DOMContentLoaded', () => {
   initDom();
@@ -1305,17 +1359,35 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Native camera callback from AndroidBridge
   window.__handleNativePhoto = (dataUrl) => {
-    fetch(dataUrl)
-      .then(r => r.blob())
-      .then(blob => {
+    try {
+      if (!dataUrl && window.AndroidBridge && window.AndroidBridge.getLatestCapturedPhoto) {
+        dataUrl = window.AndroidBridge.getLatestCapturedPhoto();
+      }
+      if (!dataUrl) return;
+      const blob = dataURLtoBlob(dataUrl);
+      if (blob) {
         const file = new File([blob], `Camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
         handleFiles([file]);
-      })
-      .catch(err => {
-        console.error('Error handling native camera capture:', err);
-        showToast('Could not load camera photo', 'error');
-      });
+      } else {
+        showToast('Could not decode camera photo', 'error');
+      }
+    } catch (err) {
+      console.error('Error handling native camera capture:', err);
+      showToast('Could not load camera photo', 'error');
+    }
   };
+
+  // Check for any photo that finished while activity was paused or recreated
+  const checkPendingPhoto = () => {
+    if (window.AndroidBridge && window.AndroidBridge.getLatestCapturedPhoto) {
+      const pending = window.AndroidBridge.getLatestCapturedPhoto();
+      if (pending && pending.length > 50) {
+        window.__handleNativePhoto(pending);
+      }
+    }
+  };
+  setTimeout(checkPendingPhoto, 300);
+  window.addEventListener('focus', checkPendingPhoto);
 
   console.log('🚀 GeoTag Studio Ready!');
 });

@@ -219,22 +219,22 @@ export async function reverseGeocode(lat, lng) {
 import { PRESETS, SEARCH_DIRECTORY } from './presets.js';
 
 /**
- * Search Location by Query String (Instant Local Matching + Multi-Provider Search with Typo Tolerance)
+ * Instant Local Search (0ms latency, 100% offline)
+ * Searches presets, verified institutions, and custom favorites
  */
-export async function searchLocation(query) {
+export function searchLocationLocal(query) {
   if (!query || query.trim().length < 2) return [];
   const qRaw = query.trim();
   const qLower = qRaw.toLowerCase();
 
-  // Normalize common spelling variations (e.g., 'veternary' -> 'veterinary')
+  // Normalize common spelling variations
   const normalizedQuery = qLower
     .replace(/\bveternary\b/g, 'veterinary')
     .replace(/\bunivercity\b/g, 'university')
     .replace(/\bcollege\b/g, 'college');
 
-  const tokens = normalizedQuery.split(/[\s,]+/).filter(t => t.length > 2);
+  const tokens = normalizedQuery.split(/[\s,]+/).filter(t => t.length >= 2);
 
-  // 1. Instant local preset, search directory, and user favorite matching (0ms, 100% offline)
   const allLocal = [
     ...(typeof PRESETS !== 'undefined' ? PRESETS : []),
     ...(typeof SEARCH_DIRECTORY !== 'undefined' ? SEARCH_DIRECTORY : [])
@@ -271,14 +271,30 @@ export async function searchLocation(query) {
     }
   });
 
-  // 2. Query Photon API (Komoot OpenStreetMap Elasticsearch - supports typos and token permutations)
+  return localMatches;
+}
+
+/**
+ * Remote Map Search (Photon / OpenStreetMap Elasticsearch with timeout)
+ */
+export async function searchLocationRemote(query, signal = null) {
+  if (!query || query.trim().length < 2) return [];
+  const qRaw = query.trim();
+  const qLower = qRaw.toLowerCase();
+
+  const normalizedQuery = qLower
+    .replace(/\bveternary\b/g, 'veterinary')
+    .replace(/\bunivercity\b/g, 'university')
+    .replace(/\bcollege\b/g, 'college');
+
   const remoteMatches = [];
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const effectiveSignal = signal || controller.signal;
 
     const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(normalizedQuery)}&limit=6`;
-    const res = await fetch(photonUrl, { signal: controller.signal });
+    const res = await fetch(photonUrl, { signal: effectiveSignal });
     clearTimeout(timeoutId);
 
     if (res.ok) {
@@ -315,15 +331,16 @@ export async function searchLocation(query) {
     // Timeout or network error
   }
 
-  // 3. Fallback to Nominatim if remoteMatches is empty
+  // Fallback to Nominatim if remoteMatches is empty
   if (remoteMatches.length === 0) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const effectiveSignal = signal || controller.signal;
 
       const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(normalizedQuery)}&limit=5&addressdetails=1`;
       const res = await fetch(url, {
-        signal: controller.signal,
+        signal: effectiveSignal,
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'GeoTagStudioApp/1.0'
@@ -359,6 +376,16 @@ export async function searchLocation(query) {
       // Offline or network error
     }
   }
+
+  return remoteMatches;
+}
+
+/**
+ * Search Location by Query String (Instant Local Matching + Multi-Provider Search with Typo Tolerance)
+ */
+export async function searchLocation(query) {
+  const localMatches = searchLocationLocal(query);
+  const remoteMatches = await searchLocationRemote(query);
 
   // Merge and deduplicate
   const combined = [...localMatches];
