@@ -573,10 +573,21 @@ async function downloadActivePhoto() {
 
     // 4. Download file
     const outputBlob = new Blob([stampedBuffer], { type: 'image/jpeg' });
+    const safeTitle = (state.tagData.title || 'Photo').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+    const filename = `GeoTag_${safeTitle}_${Date.now()}.jpg`;
+
+    if (window.AndroidBridge && window.AndroidBridge.saveFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        window.AndroidBridge.saveFile(reader.result, filename, 'image/jpeg');
+      };
+      reader.readAsDataURL(outputBlob);
+      return;
+    }
+
     const url = URL.createObjectURL(outputBlob);
     const link = document.createElement('a');
-    const safeTitle = (state.tagData.title || 'Photo').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
-    link.download = `GeoTag_${safeTitle}_${Date.now()}.jpg`;
+    link.download = filename;
     link.href = url;
     document.body.appendChild(link);
     link.click();
@@ -620,9 +631,20 @@ async function downloadAllZip() {
   }
 
   const zipBlob = await zip.generateAsync({ type: 'blob' });
+  const filename = `GeoTag_Photos_Batch_${Date.now()}.zip`;
+
+  if (window.AndroidBridge && window.AndroidBridge.saveFile) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      window.AndroidBridge.saveFile(reader.result, filename, 'application/zip');
+    };
+    reader.readAsDataURL(zipBlob);
+    return;
+  }
+
   const url = URL.createObjectURL(zipBlob);
   const link = document.createElement('a');
-  link.download = `GeoTag_Photos_Batch_${Date.now()}.zip`;
+  link.download = filename;
   link.href = url;
   document.body.appendChild(link);
   link.click();
@@ -651,7 +673,20 @@ async function shareActivePhoto() {
       userComment: state.tagData.customNote || 'GeoTag Studio Photo'
     });
 
-    const file = new File([stampedBuffer], 'geotag_photo.jpg', { type: 'image/jpeg' });
+    const safeTitle = (state.tagData.title || 'Photo').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+    const filename = `GeoTag_${safeTitle}_${Date.now()}.jpg`;
+    const outputBlob = new Blob([stampedBuffer], { type: 'image/jpeg' });
+
+    if (window.AndroidBridge && window.AndroidBridge.shareFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        window.AndroidBridge.shareFile(reader.result, filename, 'image/jpeg');
+      };
+      reader.readAsDataURL(outputBlob);
+      return;
+    }
+
+    const file = new File([stampedBuffer], filename, { type: 'image/jpeg' });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
@@ -765,6 +800,11 @@ function confirmMapLocation() {
 let webcamStream = null;
 
 function openCameraModal() {
+  if (window.AndroidBridge && window.AndroidBridge.openCamera) {
+    window.AndroidBridge.openCamera();
+    return;
+  }
+
   const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   if (isMobile) {
     elements.cameraInput.click();
@@ -1262,5 +1302,20 @@ window.addEventListener('DOMContentLoaded', () => {
   loadPresets();
   initInitialState();
   registerServiceWorker();
+
+  // Native camera callback from AndroidBridge
+  window.__handleNativePhoto = (dataUrl) => {
+    fetch(dataUrl)
+      .then(r => r.blob())
+      .then(blob => {
+        const file = new File([blob], `Camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        handleFiles([file]);
+      })
+      .catch(err => {
+        console.error('Error handling native camera capture:', err);
+        showToast('Could not load camera photo', 'error');
+      });
+  };
+
   console.log('🚀 GeoTag Studio Ready!');
 });

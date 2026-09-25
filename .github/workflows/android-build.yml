@@ -24,7 +24,7 @@ jobs:
           node-version: 20
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -45,6 +45,7 @@ jobs:
       - name: Sync Capacitor Android
         run: |
           npx cap sync android || true
+          node scripts/build-bundle.js
           npm run sync:android
 
       - name: Build Android APK and App Bundle (AAB for Google Play Store)
@@ -109,11 +110,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v1.0.2
-          name: "GeoTag Studio Android App v1.0.2 (Official Release)"
+          tag_name: v1.0.3
+          name: "GeoTag Studio Android App v1.0.3 (Official Release)"
           fail_on_unmatched_files: true
           body: |
-            ### 📱 GeoTag Studio Official Android Application (v1.0.2)
+            ### 📱 GeoTag Studio Official Android Application (v1.0.3)
+            - **Native Android Bridge**: Full native Downloads to phone storage via modern MediaStore (zero sensitive permissions required).
+            - **Native Share Sheet**: Native Android sharing drawer support for WhatsApp, Telegram, Gmail, Drive, etc.
+            - **Native Camera Capture**: Direct integration with device camera for crisp photo uploads.
+            - **Hardware GPS Geolocation**: Direct satellite GPS coordinates via Android LocationManager.
             - **Custom GPS Map Camera & EXIF Stamping**: Privacy-first, 100% on-device photo geotagging
             - **Photo-Friendly Compact Layout**: Bottom-left compact stamp ensures photo subjects remain unblocked
             - **Interactive Mini-Map & Binary EXIF**: Embeds satellite/street mini-map and real EXIF GPS metadata
