@@ -12,7 +12,7 @@ import { formatCoordinates, formatGpsDateTime } from './geo-lookup.js';
  */
 export const DEFAULT_OPTIONS = {
   // Placement & Dimensions
-  layout: 'compact-left', // 'compact-left' (Default: photo not blocked), 'compact-right', 'top-left', 'top-right', 'full-width'
+  layout: 'compact-left', // 'compact-left' (Default: photo not blocked), 'compact-right', 'top-left', 'top-right', 'bottom-center', 'full-width'
   scale: 1.0,            // Overall size multiplier (0.7x Mini to 1.3x Large)
   marginRatio: 0.02,     // Distance from photo edge (2% of photo min dimension)
   maxWidthRatio: 0.44,   // Max card width as fraction of photo width (leaves >55% completely open!)
@@ -414,6 +414,9 @@ export async function renderGeoTagPhoto(sourceImage, tagData = {}, userOptions =
   } else if (options.layout === 'top-right') {
     cardX = imgW - m.cardWidth - m.margin;
     cardY = m.margin;
+  } else if (options.layout === 'bottom-center' || options.layout === 'compact-center') {
+    cardX = Math.round((imgW - m.cardWidth) / 2);
+    cardY = imgH - cardHeight - m.margin;
   } else if (options.layout === 'full-width') {
     cardX = m.margin;
     cardY = imgH - cardHeight - m.margin;

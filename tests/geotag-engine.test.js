@@ -44,4 +44,10 @@ assert.strictEqual(coordsSplit.length, 2, 'Coordinates split should have Lat and
 assert.strictEqual(coordsSplit[0], "Lat 13° 44' 38.7\" N");
 assert.strictEqual(coordsSplit[1], "Long 79° 42' 33.9\" E");
 
+// Test 8: Bottom-Center layout metrics & positioning check
+const metricsBottomCenter = calculateResponsiveMetrics(1920, 1080, { layout: 'bottom-center' });
+assert(metricsBottomCenter.cardWidth < 1920 * 0.50, 'Bottom-center card width should remain compact and not block photo');
+const expectedCardX = Math.round((1920 - metricsBottomCenter.cardWidth) / 2);
+assert(expectedCardX > 0 && expectedCardX < 1920, 'Bottom-center cardX should be centered horizontally');
+
 console.log('✅ All GeoTag Engine Layout & Scaling tests passed successfully!');

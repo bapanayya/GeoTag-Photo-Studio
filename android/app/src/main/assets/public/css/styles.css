@@ -1040,9 +1040,37 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
   overflow: auto;
   position: relative;
+  background-color: #0b0f19;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* When zoomed in, switch to block layout so overflow is 100% positive (never clipped on left/top!) */
+.canvas-viewport.is-zoomed {
+  display: block;
+}
+
+/* Canvas Stage (wraps canvas) */
+.canvas-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100%;
+  min-height: 100%;
+  width: max-content;
+  height: max-content;
+  margin: 0 auto;
+}
+
+.canvas-viewport.is-zoomed .canvas-stage {
+  display: block;
+  width: max-content;
+  height: max-content;
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0 auto;
 }
 
 #outputCanvas {
@@ -1053,6 +1081,8 @@ input:checked + .slider:before {
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
   transition: width 0.15s ease, height 0.15s ease;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Canvas Floating Zoom Bar */
@@ -1117,7 +1147,7 @@ input:checked + .slider:before {
 
 #outputCanvas.is-zoomed {
   cursor: grab;
-  margin: auto;
+  margin: 0 auto;
 }
 
 #outputCanvas.is-zoomed:active {

@@ -206,8 +206,8 @@
             <button type="button" class="btn-layout" data-layout="top-left">
               <span>↖️ Top-Left</span>
             </button>
-            <button type="button" class="btn-layout" data-layout="full-width">
-              <span>↔️ Full-Width Bar</span>
+            <button type="button" class="btn-layout" data-layout="bottom-center">
+              <span>⬇️ Bottom-Center</span>
             </button>
           </div>
 
@@ -315,7 +315,9 @@
             <h2 class="empty-title">No Photo Loaded Yet</h2>
             <p class="empty-desc">Upload or take a photo from the sidebar to stamp custom location details, map snippet, and binary EXIF metadata.</p>
           </div>
-          <canvas id="outputCanvas" style="display:none"></canvas>
+          <div class="canvas-stage" id="canvasStage" style="display:none;">
+            <canvas id="outputCanvas" style="display:none"></canvas>
+          </div>
         </div>
       </main>
     </div>

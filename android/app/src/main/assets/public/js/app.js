@@ -58,6 +58,7 @@ function initDom() {
   elements.btnUpload = document.getElementById('btnUpload');
   elements.btnCamera = document.getElementById('btnCamera');
   elements.batchGallery = document.getElementById('batchGallery');
+  elements.canvasStage = document.getElementById('canvasStage');
   elements.outputCanvas = document.getElementById('outputCanvas');
   elements.emptyPlaceholder = document.getElementById('emptyPlaceholder');
   elements.canvasViewport = document.getElementById('canvasViewport');
@@ -361,6 +362,7 @@ function initInitialState() {
   state.photos = [];
   state.activePhotoIndex = 0;
   if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+  if (elements.canvasStage) elements.canvasStage.style.display = 'none';
   if (elements.outputCanvas) {
     elements.outputCanvas.style.display = 'none';
     const ctx = elements.outputCanvas.getContext('2d');
@@ -515,6 +517,7 @@ function triggerRender() {
 async function performRender() {
   if (state.photos.length === 0) {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.canvasStage) elements.canvasStage.style.display = 'none';
     if (elements.outputCanvas) {
       elements.outputCanvas.style.display = 'none';
       const ctx = elements.outputCanvas.getContext('2d');
@@ -530,6 +533,7 @@ async function performRender() {
   const currentPhoto = state.photos[state.activePhotoIndex];
   if (!currentPhoto || !currentPhoto.img) {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.canvasStage) elements.canvasStage.style.display = 'none';
     if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
     if (elements.outputCanvas) {
       elements.outputCanvas.style.display = 'none';
@@ -547,6 +551,7 @@ async function performRender() {
 
     // Show output canvas, hide empty placeholder, and enable download/share
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
+    if (elements.canvasStage) elements.canvasStage.style.display = 'flex';
     if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
     if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'flex';
     if (elements.btnDownload) elements.btnDownload.disabled = false;
@@ -924,18 +929,31 @@ function resetCanvasZoom() {
 function applyCanvasZoom() {
   if (!elements.outputCanvas || state.photos.length === 0) return;
 
+  const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
+  const stage = elements.canvasStage || document.getElementById('canvasStage');
+
   if (isFitMode) {
     elements.outputCanvas.style.width = '';
     elements.outputCanvas.style.height = '';
     elements.outputCanvas.style.maxWidth = '100%';
     elements.outputCanvas.style.maxHeight = '100%';
     elements.outputCanvas.classList.remove('is-zoomed');
+    if (viewport) {
+      viewport.classList.remove('is-zoomed');
+      viewport.scrollLeft = 0;
+      viewport.scrollTop = 0;
+    }
+    if (stage) {
+      stage.style.paddingTop = '';
+      stage.style.paddingBottom = '';
+      stage.style.paddingLeft = '';
+      stage.style.paddingRight = '';
+    }
     if (elements.zoomPercent) elements.zoomPercent.textContent = 'Fit';
   } else {
     const factor = ZOOM_LEVELS[currentZoomIndex];
-    const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
-    const vw = viewport ? Math.max(200, viewport.clientWidth - 40) : 800;
-    const vh = viewport ? Math.max(200, viewport.clientHeight - 40) : 600;
+    const vw = viewport ? Math.max(200, viewport.clientWidth - 48) : 800;
+    const vh = viewport ? Math.max(200, viewport.clientHeight - 48) : 600;
 
     const natW = elements.outputCanvas.width || 1200;
     const natH = elements.outputCanvas.height || 900;
@@ -951,6 +969,15 @@ function applyCanvasZoom() {
       fitW = fitH * canvasAspect;
     }
 
+    const prevW = parseFloat(elements.outputCanvas.style.width) || fitW;
+    const prevH = parseFloat(elements.outputCanvas.style.height) || fitH;
+    const currentScrollX = viewport ? viewport.scrollLeft : 0;
+    const currentScrollY = viewport ? viewport.scrollTop : 0;
+
+    // Relative center point of currently visible portion
+    const centerXRatio = prevW > 0 ? (currentScrollX + vw / 2) / prevW : 0.5;
+    const centerYRatio = prevH > 0 ? (currentScrollY + vh / 2) / prevH : 0.5;
+
     const targetW = Math.round(fitW * factor);
     const targetH = Math.round(fitH * factor);
 
@@ -959,6 +986,37 @@ function applyCanvasZoom() {
     elements.outputCanvas.style.width = `${targetW}px`;
     elements.outputCanvas.style.height = `${targetH}px`;
     elements.outputCanvas.classList.add('is-zoomed');
+
+    if (viewport) {
+      viewport.classList.add('is-zoomed');
+    }
+
+    // Centering offsets when zoomed size is smaller than viewport
+    if (stage) {
+      const padY = Math.max(0, Math.round((vh - targetH) / 2));
+      const padX = Math.max(0, Math.round((vw - targetW) / 2));
+      stage.style.paddingTop = padY > 0 ? `${padY}px` : '';
+      stage.style.paddingBottom = padY > 0 ? `${padY}px` : '';
+      stage.style.paddingLeft = padX > 0 ? `${padX}px` : '';
+      stage.style.paddingRight = padX > 0 ? `${padX}px` : '';
+    }
+
+    // Smoothly scroll to the preserved center point in positive scroll space
+    if (viewport) {
+      requestAnimationFrame(() => {
+        if (targetW > vw) {
+          viewport.scrollLeft = Math.max(0, Math.round(targetW * centerXRatio - vw / 2));
+        } else {
+          viewport.scrollLeft = 0;
+        }
+        if (targetH > vh) {
+          viewport.scrollTop = Math.max(0, Math.round(targetH * centerYRatio - vh / 2));
+        } else {
+          viewport.scrollTop = 0;
+        }
+      });
+    }
+
     if (elements.zoomPercent) elements.zoomPercent.textContent = `${Math.round(factor * 100)}%`;
   }
 }
@@ -1004,8 +1062,8 @@ function initCanvasPanAndZoomEvents() {
       if (isFitMode || state.photos.length === 0) return;
       if (e.target.closest('.canvas-zoom-bar')) return;
       isPanning = true;
-      startX = e.pageX - viewport.offsetLeft;
-      startY = e.pageY - viewport.offsetTop;
+      startX = e.pageX;
+      startY = e.pageY;
       scrollLeft = viewport.scrollLeft;
       scrollTop = viewport.scrollTop;
     });
@@ -1013,10 +1071,8 @@ function initCanvasPanAndZoomEvents() {
     window.addEventListener('mousemove', (e) => {
       if (!isPanning) return;
       e.preventDefault();
-      const x = e.pageX - viewport.offsetLeft;
-      const y = e.pageY - viewport.offsetTop;
-      const walkX = (x - startX);
-      const walkY = (y - startY);
+      const walkX = e.pageX - startX;
+      const walkY = e.pageY - startY;
       viewport.scrollLeft = scrollLeft - walkX;
       viewport.scrollTop = scrollTop - walkY;
     });
