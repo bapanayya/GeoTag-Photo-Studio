@@ -12,6 +12,7 @@ import android.graphics.Matrix;
 import android.location.Location;
 import android.location.LocationManager;
 import android.media.ExifInterface;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -264,7 +265,68 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public boolean saveToGallery(String base64Data, String filename) {
+            return saveImageToGalleryInternal(base64Data, filename);
+        }
+
+        private boolean saveImageToGalleryInternal(String base64Data, String filename) {
+            try {
+                if (base64Data == null || base64Data.isEmpty()) return false;
+                if (base64Data.contains(",")) {
+                    base64Data = base64Data.substring(base64Data.indexOf(",") + 1);
+                }
+                base64Data = base64Data.trim();
+                byte[] fileBytes = Base64.decode(base64Data, Base64.DEFAULT);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Images.Media.DISPLAY_NAME, filename);
+                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                    values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/Camera");
+                    values.put(MediaStore.Images.Media.IS_PENDING, 1);
+
+                    Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                    if (uri != null) {
+                        try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                            if (os != null) {
+                                os.write(fileBytes);
+                                os.flush();
+                            }
+                        }
+                        values.clear();
+                        values.put(MediaStore.Images.Media.IS_PENDING, 0);
+                        getContentResolver().update(uri, values, null, null);
+                    }
+                } else {
+                    File dcimDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Camera");
+                    if (!dcimDir.exists()) {
+                        dcimDir.mkdirs();
+                    }
+                    File dest = new File(dcimDir, filename);
+                    try (FileOutputStream fos = new FileOutputStream(dest)) {
+                        fos.write(fileBytes);
+                        fos.flush();
+                    }
+                    MediaScannerConnection.scanFile(MainActivity.this,
+                        new String[]{dest.getAbsolutePath()},
+                        new String[]{"image/jpeg"}, null);
+                }
+
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Saved to Gallery / Photos: " + filename, Toast.LENGTH_LONG).show());
+                return true;
+            } catch (Exception e) {
+                Log.e(TAG, "Error saving image to Gallery in NativeBridge", e);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Save error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                return false;
+            }
+        }
+
+        @JavascriptInterface
         public void saveFile(String base64Data, String filename, String mimeType) {
+            if (mimeType != null && mimeType.startsWith("image/")) {
+                saveImageToGalleryInternal(base64Data, filename);
+                return;
+            }
             try {
                 if (base64Data == null || base64Data.isEmpty()) return;
                 if (base64Data.contains(",")) {

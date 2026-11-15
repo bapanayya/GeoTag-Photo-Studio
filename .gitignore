@@ -11,6 +11,7 @@ android/app/build/
 android/capacitor-cordova-android-plugins/
 *.apk
 *.aab
+assets/playstore/screenshots/*.jpg
 
 # OS files
 .DS_Store

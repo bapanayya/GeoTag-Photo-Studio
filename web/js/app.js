@@ -393,8 +393,10 @@ function clearPhotos() {
 
 /**
  * Handle Image Loading and EXIF Extraction
+ * @param {FileList|File[]} fileList
+ * @param {Object} options - { source: 'upload' | 'camera' }
  */
-async function handleFiles(fileList) {
+async function handleFiles(fileList, { source = 'upload' } = {}) {
   if (!fileList || fileList.length === 0) return;
 
   const validFiles = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
@@ -403,7 +405,24 @@ async function handleFiles(fileList) {
     return;
   }
 
-  showToast(`Loading ${validFiles.length} photo(s)...`, 'info');
+  const isCamera = (source === 'camera');
+  if (isCamera) {
+    showToast('Processing camera capture with Geo-Tag stamp...', 'info');
+  } else {
+    showToast(`Loading ${validFiles.length} photo(s)...`, 'info');
+  }
+
+  // Ensure current settings from the form controls are synced
+  syncInputsToState();
+
+  if (isCamera) {
+    // For camera: Position & location details are already selected by user in the settings below.
+    // If capture date wasn't custom-set, update to current capture timestamp:
+    if (!elements.inputDate || !elements.inputDate.value) {
+      state.tagData.date = new Date();
+      syncStateToInputs();
+    }
+  }
 
   // Completely reset photos on new selection so previous/test photos never linger in background
   state.photos = [];
@@ -432,8 +451,9 @@ async function handleFiles(fileList) {
 
       state.photos.push(photoEntry);
 
-      // If active photo and EXIF GPS found, auto-fill location!
-      if (state.photos.length === 1 && exif) {
+      // If uploaded photo (not camera) and EXIF GPS found, auto-fill location!
+      // In camera mode, the user's selected settings below are preserved.
+      if (!isCamera && state.photos.length === 1 && exif) {
         if (exif.latitude !== null && exif.longitude !== null) {
           state.tagData.lat = exif.latitude;
           state.tagData.lng = exif.longitude;
@@ -469,8 +489,22 @@ async function handleFiles(fileList) {
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
 
     syncStateToInputs();
-    triggerRender();
-    showToast(`${validFiles.length} photo(s) ready!`, 'success');
+    await performRender();
+
+    if (isCamera) {
+      // User captured camera photograph: immediately save stamped photo to Gallery/Photos without waiting
+      const currentPhoto = state.photos[state.activePhotoIndex];
+      const result = await generateStampedJpegBlob(currentPhoto);
+      if (result) {
+        await saveBlobToGalleryOrDevice(result.outputBlob, result.filename, true);
+        if (elements.photoMetrics) {
+          elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Auto-saved to Gallery / Photos 📸`;
+        }
+      }
+    } else {
+      // User uploaded picture: preview on canvas and allow user to download when ready
+      showToast(`${validFiles.length} photo(s) ready! Preview the stamped photo and click Download when ready.`, 'info');
+    }
   } else {
     initInitialState();
   }
@@ -579,59 +613,100 @@ async function performRender() {
 }
 
 /**
+ * Generate High-Res Stamped JPEG Blob with Binary EXIF Injection
+ */
+async function generateStampedJpegBlob(photoEntry) {
+  if (!photoEntry || !photoEntry.img) return null;
+  syncInputsToState();
+  const canvas = await renderGeoTagPhoto(photoEntry.img, state.tagData, state.options);
+
+  return new Promise((resolve) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        resolve(null);
+        return;
+      }
+      try {
+        const rawBuffer = await blob.arrayBuffer();
+        const stampedBuffer = injectExifIntoJpeg(rawBuffer, {
+          latitude: state.tagData.lat,
+          longitude: state.tagData.lng,
+          altitude: state.tagData.altitude || 0,
+          date: state.tagData.date || new Date(),
+          userComment: state.tagData.customNote || 'GeoTag Studio Photo'
+        });
+
+        const outputBlob = new Blob([stampedBuffer], { type: 'image/jpeg' });
+        const safeTitle = (state.tagData.title || 'Photo').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+        const filename = `GeoTag_${safeTitle}_${Date.now()}.jpg`;
+        resolve({ canvas, outputBlob, filename });
+      } catch (err) {
+        console.error('Error generating stamped JPEG with EXIF:', err);
+        resolve(null);
+      }
+    }, 'image/jpeg', 0.95);
+  });
+}
+
+/**
+ * Save Stamped Photo to Device (Gallery/Photos on Android, default save/download on Web/Desktop)
+ */
+async function saveBlobToGalleryOrDevice(outputBlob, filename, isAutoSave = false) {
+  if (!outputBlob) return;
+
+  // 1. Android Native Bridge (Saves directly to Gallery / Photos / DCIM Camera)
+  if (window.AndroidBridge && (window.AndroidBridge.saveToGallery || window.AndroidBridge.saveFile)) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (window.AndroidBridge.saveToGallery) {
+        window.AndroidBridge.saveToGallery(reader.result, filename);
+      } else {
+        window.AndroidBridge.saveFile(reader.result, filename, 'image/jpeg');
+      }
+    };
+    reader.readAsDataURL(outputBlob);
+    if (isAutoSave) {
+      showToast('📸 Photo with Geo-Tag stamp saved directly to Gallery / Photos!', 'success');
+    } else {
+      showToast('📸 Photo saved to Gallery / Photos!', 'success');
+    }
+    return;
+  }
+
+  // 2. Web Browser / PWA / Desktop automatic download
+  const url = URL.createObjectURL(outputBlob);
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 1000);
+
+  if (isAutoSave) {
+    showToast('📸 Photo with Geo-Tag stamp auto-saved to device!', 'success');
+  } else {
+    showToast('Geo-tagged photo downloaded with full EXIF GPS!', 'success');
+  }
+}
+
+/**
  * Export Active Photo as High-Res JPEG with Binary EXIF Injection
  */
 async function downloadActivePhoto() {
   if (state.photos.length === 0) {
-    showToast('Please upload a photo first.', 'error');
+    showToast('Please select or upload a photo first.', 'error');
     return;
   }
   const currentPhoto = state.photos[state.activePhotoIndex];
-
   showToast('Embedding binary EXIF GPS metadata...', 'info');
 
-  // 1. Render stamped canvas
-  const canvas = await renderGeoTagPhoto(currentPhoto.img, state.tagData, state.options);
-
-  // 2. Convert to JPEG Blob
-  canvas.toBlob(async (blob) => {
-    if (!blob) return;
-    const rawBuffer = await blob.arrayBuffer();
-
-    // 3. Inject binary EXIF GPS & Date tags
-    const stampedBuffer = injectExifIntoJpeg(rawBuffer, {
-      latitude: state.tagData.lat,
-      longitude: state.tagData.lng,
-      altitude: state.tagData.altitude || 0,
-      date: state.tagData.date || new Date(),
-      userComment: state.tagData.customNote || 'GeoTag Studio Photo'
-    });
-
-    // 4. Download file
-    const outputBlob = new Blob([stampedBuffer], { type: 'image/jpeg' });
-    const safeTitle = (state.tagData.title || 'Photo').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
-    const filename = `GeoTag_${safeTitle}_${Date.now()}.jpg`;
-
-    if (window.AndroidBridge && window.AndroidBridge.saveFile) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        window.AndroidBridge.saveFile(reader.result, filename, 'image/jpeg');
-      };
-      reader.readAsDataURL(outputBlob);
-      return;
-    }
-
-    const url = URL.createObjectURL(outputBlob);
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = url;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    showToast('Geo-tagged photo downloaded with full EXIF GPS!', 'success');
-  }, 'image/jpeg', 0.95);
+  const result = await generateStampedJpegBlob(currentPhoto);
+  if (result) {
+    await saveBlobToGalleryOrDevice(result.outputBlob, result.filename, false);
+  }
 }
 
 /**
@@ -887,7 +962,7 @@ function snapWebcamPhoto() {
     closeCameraModal();
     if (!blob) return;
     const file = new File([blob], `Camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
-    handleFiles([file]);
+    handleFiles([file], { source: 'camera' });
   }, 'image/jpeg', 0.95);
 }
 
@@ -1158,10 +1233,10 @@ function setupEvents() {
 
   // File Input Changes
   if (elements.fileInput) {
-    elements.fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    elements.fileInput.addEventListener('change', (e) => handleFiles(e.target.files, { source: 'upload' }));
   }
   if (elements.cameraInput) {
-    elements.cameraInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    elements.cameraInput.addEventListener('change', (e) => handleFiles(e.target.files, { source: 'camera' }));
   }
 
   // Dropzone Drag & Drop
@@ -1174,7 +1249,7 @@ function setupEvents() {
     elements.dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       elements.dropzone.classList.remove('drag-over');
-      handleFiles(e.dataTransfer.files);
+      handleFiles(e.dataTransfer.files, { source: 'upload' });
     });
     elements.dropzone.addEventListener('click', (e) => {
       if (e.target.tagName !== 'BUTTON') elements.fileInput.click();
@@ -1651,7 +1726,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const blob = dataURLtoBlob(dataUrl);
       if (blob) {
         const file = new File([blob], `Camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        handleFiles([file]);
+        handleFiles([file], { source: 'camera' });
       } else {
         showToast('Could not decode camera photo', 'error');
       }

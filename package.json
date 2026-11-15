@@ -1,11 +1,11 @@
 {
   "name": "geotag-photo-studio",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "Privacy-First Custom GPS Map Camera & EXIF Photo Stamping Studio for Desktop and Android",
   "main": "web/index.html",
   "type": "module",
   "scripts": {
-    "test": "node tests/geo-lookup.test.js && node tests/exif-engine.test.js && node tests/geotag-engine.test.js && node tests/blank-initial-state.test.js",
+    "test": "node tests/geo-lookup.test.js && node tests/exif-engine.test.js && node tests/geotag-engine.test.js && node tests/blank-initial-state.test.js && node tests/camera-auto-save.test.js",
     "serve": "node scripts/serve.js",
     "sync:android": "node scripts/sync-android.js"
   },

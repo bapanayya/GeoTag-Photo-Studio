@@ -110,17 +110,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v1.0.7
-          name: "GeoTag Studio Android App v1.0.7 (Official Release)"
+          tag_name: v1.0.8
+          name: "GeoTag Studio Android App v1.0.8 (Official Release)"
           fail_on_unmatched_files: true
           body: |
-            ### 📱 GeoTag Studio Official Android Application (v1.0.7)
+            ### 📱 GeoTag Studio Official Android Application (v1.0.8)
+            - **Camera Immediate Auto-Save**: Photos captured with the camera are now immediately stamped and saved directly to the device Gallery / Photos (`DCIM/Camera`) without waiting for manual download.
+            - **Upload & Preview Flow**: Uploaded pictures can be previewed on the interactive canvas, adjusted with custom location/stamp settings, and downloaded when ready.
             - **Full Canvas Left Scroll & Pan**: Fixed viewport layout so zoomed-in photos never get clipped on the left side. Bottom scrollbar now moves smoothly all the way to the left, center, and right.
-            - **Bottom-Center Stamp Layout**: Added the requested `Bottom-Center` layout option (replacing Full-Width Bar) for a perfectly balanced bottom-centered stamp card.
+            - **Bottom-Center Stamp Layout**: Balanced bottom-centered stamp card option.
             - **Official Geo Tag Camera Launcher Icon**: Displays map background, camera lens, and red location pin across all Android launcher densities.
-            - **Stamp Scale Overflow Safeguard**: Proportional card expansion and auto-scaled / wrapped coordinates, date/time, and notes preventing right-edge overflow at >100% stamp scale.
-            - **Interactive Canvas Zoom & Pan**: Floating zoom controls (`🔍+`, `🔍−`, `Fit`, zoom percentage, double-click, mouse wheel, touch pinch, and drag-to-pan).
-            - **Native Android Bridge**: Modern MediaStore downloads directly into phone gallery/storage.
+            - **Native Android Bridge**: Modern MediaStore integration directly into phone gallery/storage.
             - **Native Share Sheet**: System sharing sheet for WhatsApp, Telegram, Gmail, Drive, etc.
             - **Direct Download**:
               - Tap `GeoTagStudio.apk` to install directly on your Android phone.
