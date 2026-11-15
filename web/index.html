@@ -302,6 +302,28 @@
 
         <!-- Canvas Viewport -->
         <div class="canvas-viewport" id="canvasViewport">
+          <!-- iOS Photos Save Banner -->
+          <div id="iosPhotosBanner" class="ios-photos-banner" style="display:none;">
+            <div class="ios-banner-info">
+              <span class="ios-banner-icon">📱</span>
+              <div class="ios-banner-text">
+                <strong>iPhone / iPad Photo Ready!</strong>
+                <span>Save directly into your <strong>Photos Library (Camera Roll)</strong>:</span>
+              </div>
+            </div>
+            <div class="ios-banner-actions">
+              <button type="button" id="btnIosSaveToPhotos" class="btn-ios-save" title="Save directly into Apple Photos Library (Camera Roll)">
+                🖼️ Save to Photos
+              </button>
+              <button type="button" id="btnIosDownloadFiles" class="btn-ios-files" title="Download copy to Files app">
+                📁 Files
+              </button>
+            </div>
+            <div class="ios-banner-tip">
+              💡 <em>Tap <strong>"Save to Photos"</strong> ➔ tap <strong>"Save Image"</strong> (Photos icon), or tap &amp; hold the photo to save.</em>
+            </div>
+          </div>
+
           <!-- Canvas Floating Zoom Bar -->
           <div class="canvas-zoom-bar" id="canvasZoomBar" style="display:none;" aria-label="Photo Zoom Controls">
             <button type="button" id="btnZoomOut" class="btn-canvas-zoom" title="Zoom Out (Ctrl -)">🔍−</button>
@@ -317,6 +339,7 @@
           </div>
           <div class="canvas-stage" id="canvasStage" style="display:none;">
             <canvas id="outputCanvas" style="display:none"></canvas>
+            <img id="outputImg" class="output-img" alt="Geo-Tagged Stamped Photo" style="display:none;">
           </div>
         </div>
       </main>

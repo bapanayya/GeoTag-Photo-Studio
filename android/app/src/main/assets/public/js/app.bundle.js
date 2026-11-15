@@ -1655,11 +1655,24 @@ const state = {
     bgColor: 'rgba(15, 23, 42, 0.82)'
   },
   isRendering: false,
-  presets: PRESETS
+  presets: PRESETS,
+  lastIosBlob: null,
+  lastIosFilename: null
 };
 
 // DOM Element References
 const elements = {};
+
+/**
+ * Detect iPhone, iPad, or iPod touch (including iPadOS desktop mode)
+ */
+function isIOSDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const isIos = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return Boolean(isIos && !window.MSStream);
+}
 
 function initDom() {
   elements.fileInput = document.getElementById('fileInput');
@@ -1670,6 +1683,10 @@ function initDom() {
   elements.batchGallery = document.getElementById('batchGallery');
   elements.canvasStage = document.getElementById('canvasStage');
   elements.outputCanvas = document.getElementById('outputCanvas');
+  elements.outputImg = document.getElementById('outputImg');
+  elements.iosPhotosBanner = document.getElementById('iosPhotosBanner');
+  elements.btnIosSaveToPhotos = document.getElementById('btnIosSaveToPhotos');
+  elements.btnIosDownloadFiles = document.getElementById('btnIosDownloadFiles');
   elements.emptyPlaceholder = document.getElementById('emptyPlaceholder');
   elements.canvasViewport = document.getElementById('canvasViewport');
   elements.canvasZoomBar = document.getElementById('canvasZoomBar');
@@ -1971,8 +1988,15 @@ function syncInputsToState() {
 function initInitialState() {
   state.photos = [];
   state.activePhotoIndex = 0;
+  state.lastIosBlob = null;
+  state.lastIosFilename = null;
   if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
   if (elements.canvasStage) elements.canvasStage.style.display = 'none';
+  if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
+  if (elements.outputImg) {
+    elements.outputImg.style.display = 'none';
+    elements.outputImg.src = '';
+  }
   if (elements.outputCanvas) {
     elements.outputCanvas.style.display = 'none';
     const ctx = elements.outputCanvas.getContext('2d');
@@ -1995,6 +2019,8 @@ function initInitialState() {
 function clearPhotos() {
   state.photos = [];
   state.activePhotoIndex = 0;
+  state.lastIosBlob = null;
+  state.lastIosFilename = null;
   if (elements.fileInput) elements.fileInput.value = '';
   if (elements.cameraInput) elements.cameraInput.value = '';
   initInitialState();
@@ -2108,7 +2134,11 @@ async function handleFiles(fileList, { source = 'upload' } = {}) {
       if (result) {
         await saveBlobToGalleryOrDevice(result.outputBlob, result.filename, true);
         if (elements.photoMetrics) {
-          elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Auto-saved to Gallery / Photos 📸`;
+          if (isIOSDevice()) {
+            elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Ready for iPhone Photos 📸`;
+          } else {
+            elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Auto-saved to Gallery / Photos 📸`;
+          }
         }
       }
     } else {
@@ -2162,6 +2192,11 @@ async function performRender() {
   if (state.photos.length === 0) {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
     if (elements.canvasStage) elements.canvasStage.style.display = 'none';
+    if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
+    if (elements.outputImg) {
+      elements.outputImg.style.display = 'none';
+      elements.outputImg.src = '';
+    }
     if (elements.outputCanvas) {
       elements.outputCanvas.style.display = 'none';
       const ctx = elements.outputCanvas.getContext('2d');
@@ -2178,7 +2213,12 @@ async function performRender() {
   if (!currentPhoto || !currentPhoto.img) {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
     if (elements.canvasStage) elements.canvasStage.style.display = 'none';
+    if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
     if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
+    if (elements.outputImg) {
+      elements.outputImg.style.display = 'none';
+      elements.outputImg.src = '';
+    }
     if (elements.outputCanvas) {
       elements.outputCanvas.style.display = 'none';
       const ctx = elements.outputCanvas.getContext('2d');
@@ -2196,7 +2236,6 @@ async function performRender() {
     // Show output canvas, hide empty placeholder, and enable download/share
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
     if (elements.canvasStage) elements.canvasStage.style.display = 'flex';
-    if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
     if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'flex';
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
@@ -2208,6 +2247,24 @@ async function performRender() {
     const ctx = elements.outputCanvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(canvas, 0, 0);
+
+    // Sync Output Image for iOS native long-press "Save to Photos"
+    if (elements.outputImg) {
+      try {
+        elements.outputImg.src = canvas.toDataURL('image/jpeg', 0.95);
+      } catch (e) {
+        console.warn('Canvas toDataURL failed:', e);
+      }
+      if (isIOSDevice()) {
+        elements.outputImg.style.display = 'block';
+        elements.outputCanvas.style.display = 'none';
+      } else {
+        elements.outputImg.style.display = 'none';
+        elements.outputCanvas.style.display = 'block';
+      }
+    } else {
+      if (elements.outputCanvas) elements.outputCanvas.style.display = 'block';
+    }
 
     applyCanvasZoom();
 
@@ -2259,7 +2316,53 @@ async function generateStampedJpegBlob(photoEntry) {
 }
 
 /**
- * Save Stamped Photo to Device (Gallery/Photos on Android, default save/download on Web/Desktop)
+ * Trigger standard web browser file download
+ */
+function downloadBlob(outputBlob, filename) {
+  const url = URL.createObjectURL(outputBlob);
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+/**
+ * Trigger iOS Native Share Sheet to Save Directly into Apple Photos Library
+ */
+async function triggerIosSaveToPhotos(blob, filename) {
+  const targetBlob = blob || state.lastIosBlob;
+  const targetFilename = filename || state.lastIosFilename || `GeoTag_${Date.now()}.jpg`;
+  if (!targetBlob) return false;
+
+  const file = new File([targetBlob], targetFilename, { type: 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: targetFilename,
+        text: 'Geo-Tagged Photo'
+      });
+      showToast('📸 Saved to iPhone Photos!', 'success');
+      return true;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('iOS share error:', err);
+      }
+      return false;
+    }
+  } else {
+    downloadBlob(targetBlob, targetFilename);
+    return false;
+  }
+}
+
+/**
+ * Save Stamped Photo to Device (Gallery/Photos on Android, Web Share on iOS, default save/download on Web/Desktop)
  */
 async function saveBlobToGalleryOrDevice(outputBlob, filename, isAutoSave = false) {
   if (!outputBlob) return;
@@ -2283,17 +2386,44 @@ async function saveBlobToGalleryOrDevice(outputBlob, filename, isAutoSave = fals
     return;
   }
 
-  // 2. Web Browser / PWA / Desktop automatic download
-  const url = URL.createObjectURL(outputBlob);
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = url;
-  document.body.appendChild(link);
-  link.click();
-  setTimeout(() => {
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, 1000);
+  // 2. iOS Safari / iPhone / iPad Handling (Web Share to Photos Library + 1-Tap Action Banner)
+  if (isIOSDevice()) {
+    state.lastIosBlob = outputBlob;
+    state.lastIosFilename = filename;
+
+    // Show the prominent iOS Photos Action Banner
+    if (elements.iosPhotosBanner) {
+      elements.iosPhotosBanner.style.display = 'flex';
+    }
+
+    // Attempt native share sheet immediately (if user gesture token is still active)
+    try {
+      const file = new File([outputBlob], filename, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: filename,
+          text: 'Geo-Tagged Photo'
+        });
+        showToast('📸 Saved to iPhone Photos!', 'success');
+        return;
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.log('Immediate iOS share required fresh gesture:', err.message);
+      }
+    }
+
+    if (isAutoSave) {
+      showToast('📸 Photo stamped! Tap "Save to Photos" above to add directly to your Photos Library.', 'info');
+    } else {
+      showToast('📸 Ready! Tap "Save to Photos" above to add to your Photos Library.', 'info');
+    }
+    return;
+  }
+
+  // 3. Web Browser / PWA / Desktop automatic download
+  downloadBlob(outputBlob, filename);
 
   if (isAutoSave) {
     showToast('📸 Photo with Geo-Tag stamp auto-saved to device!', 'success');
@@ -2612,17 +2742,20 @@ function resetCanvasZoom() {
 }
 
 function applyCanvasZoom() {
-  if (!elements.outputCanvas || state.photos.length === 0) return;
+  if ((!elements.outputCanvas && !elements.outputImg) || state.photos.length === 0) return;
 
   const viewport = elements.canvasViewport || document.querySelector('.canvas-viewport');
   const stage = elements.canvasStage || document.getElementById('canvasStage');
+  const zoomTargets = [elements.outputCanvas, elements.outputImg].filter(Boolean);
 
   if (isFitMode) {
-    elements.outputCanvas.style.width = '';
-    elements.outputCanvas.style.height = '';
-    elements.outputCanvas.style.maxWidth = '100%';
-    elements.outputCanvas.style.maxHeight = '100%';
-    elements.outputCanvas.classList.remove('is-zoomed');
+    zoomTargets.forEach(el => {
+      el.style.width = '';
+      el.style.height = '';
+      el.style.maxWidth = '100%';
+      el.style.maxHeight = '100%';
+      el.classList.remove('is-zoomed');
+    });
     if (viewport) {
       viewport.classList.remove('is-zoomed');
       viewport.scrollLeft = 0;
@@ -2640,8 +2773,8 @@ function applyCanvasZoom() {
     const vw = viewport ? Math.max(200, viewport.clientWidth - 48) : 800;
     const vh = viewport ? Math.max(200, viewport.clientHeight - 48) : 600;
 
-    const natW = elements.outputCanvas.width || 1200;
-    const natH = elements.outputCanvas.height || 900;
+    const natW = (elements.outputCanvas && elements.outputCanvas.width) || 1200;
+    const natH = (elements.outputCanvas && elements.outputCanvas.height) || 900;
     const canvasAspect = natW / (natH || 1);
     const vpAspect = vw / vh;
 
@@ -2654,8 +2787,8 @@ function applyCanvasZoom() {
       fitW = fitH * canvasAspect;
     }
 
-    const prevW = parseFloat(elements.outputCanvas.style.width) || fitW;
-    const prevH = parseFloat(elements.outputCanvas.style.height) || fitH;
+    const prevW = parseFloat(elements.outputCanvas ? elements.outputCanvas.style.width : '') || fitW;
+    const prevH = parseFloat(elements.outputCanvas ? elements.outputCanvas.style.height : '') || fitH;
     const currentScrollX = viewport ? viewport.scrollLeft : 0;
     const currentScrollY = viewport ? viewport.scrollTop : 0;
 
@@ -2666,11 +2799,13 @@ function applyCanvasZoom() {
     const targetW = Math.round(fitW * factor);
     const targetH = Math.round(fitH * factor);
 
-    elements.outputCanvas.style.maxWidth = 'none';
-    elements.outputCanvas.style.maxHeight = 'none';
-    elements.outputCanvas.style.width = `${targetW}px`;
-    elements.outputCanvas.style.height = `${targetH}px`;
-    elements.outputCanvas.classList.add('is-zoomed');
+    zoomTargets.forEach(el => {
+      el.style.maxWidth = 'none';
+      el.style.maxHeight = 'none';
+      el.style.width = `${targetW}px`;
+      el.style.height = `${targetH}px`;
+      el.classList.add('is-zoomed');
+    });
 
     if (viewport) {
       viewport.classList.add('is-zoomed');
@@ -2711,16 +2846,20 @@ function initCanvasPanAndZoomEvents() {
   if (elements.btnZoomOut) elements.btnZoomOut.addEventListener('click', zoomOut);
   if (elements.btnZoomReset) elements.btnZoomReset.addEventListener('click', resetCanvasZoom);
 
-  // Double click canvas to toggle between Fit and 150%
+  // Double click canvas or image to toggle between Fit and 150%
+  const handleDblClick = () => {
+    if (state.photos.length === 0) return;
+    if (isFitMode) {
+      setZoomIndex(4); // 1.5 (150%)
+    } else {
+      resetCanvasZoom();
+    }
+  };
   if (elements.outputCanvas) {
-    elements.outputCanvas.addEventListener('dblclick', () => {
-      if (state.photos.length === 0) return;
-      if (isFitMode) {
-        setZoomIndex(4); // 1.5 (150%)
-      } else {
-        resetCanvasZoom();
-      }
-    });
+    elements.outputCanvas.addEventListener('dblclick', handleDblClick);
+  }
+  if (elements.outputImg) {
+    elements.outputImg.addEventListener('dblclick', handleDblClick);
   }
 
   // Mouse wheel zoom inside viewport
@@ -3242,6 +3381,31 @@ function setupEvents() {
   if (elements.btnDownload) elements.btnDownload.addEventListener('click', downloadActivePhoto);
   if (elements.btnDownloadZip) elements.btnDownloadZip.addEventListener('click', downloadAllZip);
   if (elements.btnShare) elements.btnShare.addEventListener('click', shareActivePhoto);
+
+  // iOS Save to Photos and Files Banner Buttons
+  if (elements.btnIosSaveToPhotos) {
+    elements.btnIosSaveToPhotos.addEventListener('click', async () => {
+      if (!state.lastIosBlob && state.photos.length > 0) {
+        const currentPhoto = state.photos[state.activePhotoIndex];
+        const result = await generateStampedJpegBlob(currentPhoto);
+        if (result) {
+          state.lastIosBlob = result.outputBlob;
+          state.lastIosFilename = result.filename;
+        }
+      }
+      await triggerIosSaveToPhotos(state.lastIosBlob, state.lastIosFilename);
+    });
+  }
+
+  if (elements.btnIosDownloadFiles) {
+    elements.btnIosDownloadFiles.addEventListener('click', () => {
+      if (state.lastIosBlob && state.lastIosFilename) {
+        downloadBlob(state.lastIosBlob, state.lastIosFilename);
+      } else {
+        downloadActivePhoto();
+      }
+    });
+  }
 
   // Install App PWA Handlers
   if (elements.btnInstallApp) elements.btnInstallApp.addEventListener('click', openInstallModal);
