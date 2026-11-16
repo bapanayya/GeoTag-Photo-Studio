@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
   <link rel="stylesheet" href="./assets/leaflet/leaflet.css">
-  <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.2">
 </head>
 <body>
 
@@ -436,12 +436,38 @@
     </div>
   </div>
 
+  <!-- iOS Save to Photos Prompt Modal -->
+  <div id="iosSaveModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px; text-align: center;">
+      <div class="modal-header" style="justify-content: center; position: relative;">
+        <h3 class="modal-title">📸 Photo Stamped Successfully!</h3>
+        <button type="button" id="btnCloseIosSaveModal" class="btn-close-modal" style="position: absolute; right: 16px;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px 24px; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 8px;">🖼️</div>
+        <h4 style="color: #38bdf8; margin: 0 0 10px; font-size: 1.15rem;">Save to iPhone Photos Library</h4>
+        <p style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+          Tap the button below and select <strong>"Save Image"</strong> (Photos icon) to save this stamped photo directly into your Apple Photos / Camera Roll:
+        </p>
+        <button type="button" id="btnIosModalSave" class="btn-action-primary" style="width: 100%; padding: 14px 20px; font-size: 1.05rem; font-weight: 700; border-radius: 12px; margin-bottom: 12px; justify-content: center; box-shadow: 0 4px 16px rgba(14, 165, 233, 0.4);">
+          🖼️ Save to Photos Library
+        </button>
+        <button type="button" id="btnIosModalFiles" class="btn-action-secondary" style="width: 100%; padding: 10px 16px; font-size: 0.88rem; justify-content: center;">
+          📁 Save to Files App (Downloads)
+        </button>
+        <div style="margin-top: 16px; padding: 10px 14px; background: rgba(56, 189, 248, 0.08); border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.25); font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
+          💡 <strong>Tip:</strong> You can also touch and hold (long-press) any photo on screen to tap <strong>"Save to Photos"</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Vendored Offline Scripts -->
   <script src="./assets/leaflet/leaflet.js"></script>
   <script src="./assets/vendor/jszip.min.js"></script>
-  <script src="./js/app.bundle.js"></script>
+  <script src="./js/app.bundle.js?v=1.0.8.2"></script>
 </body>
 </html>

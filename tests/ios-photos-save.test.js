@@ -21,6 +21,9 @@ assert(appJs.includes('iosPhotosBanner'), 'app.js must reference iosPhotosBanner
 assert(appJs.includes('btnIosSaveToPhotos'), 'app.js must wire btnIosSaveToPhotos');
 assert(appJs.includes('btnIosDownloadFiles'), 'app.js must wire btnIosDownloadFiles');
 assert(appJs.includes('outputImg'), 'app.js must sync outputImg for iOS long-press Save to Photos');
+assert(appJs.includes('iosSaveModal'), 'app.js must reference iosSaveModal');
+assert(appJs.includes('btnIosModalSave'), 'app.js must wire btnIosModalSave');
+assert(appJs.includes('pregenerateStampedFile'), 'app.js must pregenerate stamped file to preserve user gestures');
 
 // 2. Verify web/index.html markup
 const indexHtmlPath = path.join(rootDir, 'web', 'index.html');
@@ -30,6 +33,15 @@ assert(indexHtml.includes('id="iosPhotosBanner"'), 'index.html must include #ios
 assert(indexHtml.includes('id="btnIosSaveToPhotos"'), 'index.html must include #btnIosSaveToPhotos');
 assert(indexHtml.includes('id="btnIosDownloadFiles"'), 'index.html must include #btnIosDownloadFiles');
 assert(indexHtml.includes('id="outputImg"'), 'index.html must include #outputImg');
+assert(indexHtml.includes('id="iosSaveModal"'), 'index.html must include #iosSaveModal');
+assert(indexHtml.includes('id="btnIosModalSave"'), 'index.html must include #btnIosModalSave');
+
+// 3. Verify web/sw.js cache configuration
+const swJsPath = path.join(rootDir, 'web', 'sw.js');
+const swJs = fs.readFileSync(swJsPath, 'utf8');
+
+assert(swJs.includes('geotag-studio-v3'), 'sw.js must bump cache version to geotag-studio-v3');
+assert(swJs.includes("navigate") && swJs.includes(".js"), 'sw.js must use network-first for immediate updates');
 
 // 3. Verify web/css/styles.css styling
 const stylesCssPath = path.join(rootDir, 'web', 'css', 'styles.css');

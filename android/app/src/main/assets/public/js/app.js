@@ -47,7 +47,10 @@ const state = {
   isRendering: false,
   presets: PRESETS,
   lastIosBlob: null,
-  lastIosFilename: null
+  lastIosFilename: null,
+  stampedBlob: null,
+  stampedFile: null,
+  stampedFilename: null
 };
 
 // DOM Element References
@@ -77,6 +80,10 @@ function initDom() {
   elements.iosPhotosBanner = document.getElementById('iosPhotosBanner');
   elements.btnIosSaveToPhotos = document.getElementById('btnIosSaveToPhotos');
   elements.btnIosDownloadFiles = document.getElementById('btnIosDownloadFiles');
+  elements.iosSaveModal = document.getElementById('iosSaveModal');
+  elements.btnCloseIosSaveModal = document.getElementById('btnCloseIosSaveModal');
+  elements.btnIosModalSave = document.getElementById('btnIosModalSave');
+  elements.btnIosModalFiles = document.getElementById('btnIosModalFiles');
   elements.emptyPlaceholder = document.getElementById('emptyPlaceholder');
   elements.canvasViewport = document.getElementById('canvasViewport');
   elements.canvasZoomBar = document.getElementById('canvasZoomBar');
@@ -88,6 +95,12 @@ function initDom() {
   elements.presetSelectSidebar = document.getElementById('presetSelectSidebar');
   elements.btnSaveFavorite = document.getElementById('btnSaveFavorite');
   elements.btnDeleteFavorite = document.getElementById('btnDeleteFavorite');
+
+  // On iOS devices, adapt the download button text to "Save to Photos"
+  if (isIOSDevice() && elements.btnDownload) {
+    elements.btnDownload.innerHTML = '<span>🖼️</span> <span>Save to Photos</span>';
+    elements.btnDownload.title = 'Save directly into Apple Photos Library (Camera Roll)';
+  }
 
   // Input Fields
   elements.inputTitle = document.getElementById('inputTitle');
@@ -380,9 +393,13 @@ function initInitialState() {
   state.activePhotoIndex = 0;
   state.lastIosBlob = null;
   state.lastIosFilename = null;
+  state.stampedBlob = null;
+  state.stampedFile = null;
+  state.stampedFilename = null;
   if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
   if (elements.canvasStage) elements.canvasStage.style.display = 'none';
   if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
+  if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
   if (elements.outputImg) {
     elements.outputImg.style.display = 'none';
     elements.outputImg.src = '';
@@ -411,6 +428,10 @@ function clearPhotos() {
   state.activePhotoIndex = 0;
   state.lastIosBlob = null;
   state.lastIosFilename = null;
+  state.stampedBlob = null;
+  state.stampedFile = null;
+  state.stampedFilename = null;
+  if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
   if (elements.fileInput) elements.fileInput.value = '';
   if (elements.cameraInput) elements.cameraInput.value = '';
   initInitialState();
@@ -522,6 +543,12 @@ async function handleFiles(fileList, { source = 'upload' } = {}) {
       const currentPhoto = state.photos[state.activePhotoIndex];
       const result = await generateStampedJpegBlob(currentPhoto);
       if (result) {
+        state.stampedBlob = result.outputBlob;
+        state.stampedFilename = result.filename;
+        state.stampedFile = new File([result.outputBlob], result.filename, { type: 'image/jpeg' });
+        state.lastIosBlob = result.outputBlob;
+        state.lastIosFilename = result.filename;
+
         await saveBlobToGalleryOrDevice(result.outputBlob, result.filename, true);
         if (elements.photoMetrics) {
           if (isIOSDevice()) {
@@ -583,6 +610,7 @@ async function performRender() {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
     if (elements.canvasStage) elements.canvasStage.style.display = 'none';
     if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
+    if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
     if (elements.outputImg) {
       elements.outputImg.style.display = 'none';
       elements.outputImg.src = '';
@@ -604,6 +632,7 @@ async function performRender() {
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
     if (elements.canvasStage) elements.canvasStage.style.display = 'none';
     if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
+    if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
     if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'none';
     if (elements.outputImg) {
       elements.outputImg.style.display = 'none';
@@ -658,6 +687,9 @@ async function performRender() {
 
     applyCanvasZoom();
 
+    // Background pregeneration so user gestures on mobile/iOS are instantaneous
+    pregenerateStampedFile();
+
     // Update Metrics Badge
     if (elements.photoMetrics) {
       elements.photoMetrics.textContent = `${canvas.width} × ${canvas.height} px • Layout: ${state.options.layout}`;
@@ -667,6 +699,36 @@ async function performRender() {
   } finally {
     state.isRendering = false;
   }
+}
+
+/**
+ * Pregenerate stamped JPEG and File in memory so mobile/iOS user tap gestures are never lost
+ */
+async function pregenerateStampedFile() {
+  if (state.photos.length === 0) {
+    state.stampedBlob = null;
+    state.stampedFile = null;
+    state.stampedFilename = null;
+    state.lastIosBlob = null;
+    state.lastIosFilename = null;
+    return;
+  }
+  const currentPhoto = state.photos[state.activePhotoIndex];
+  if (!currentPhoto || !currentPhoto.img) return;
+
+  try {
+    const result = await generateStampedJpegBlob(currentPhoto);
+    if (result) {
+      state.stampedBlob = result.outputBlob;
+      state.stampedFilename = result.filename;
+      state.stampedFile = new File([result.outputBlob], result.filename, { type: 'image/jpeg' });
+      state.lastIosBlob = result.outputBlob;
+      state.lastIosFilename = result.filename;
+    }
+  } catch (err) {
+    console.warn('Background pregeneration error:', err);
+  }
+}
 }
 
 /**
@@ -721,34 +783,43 @@ function downloadBlob(outputBlob, filename) {
   }, 1000);
 }
 
+function openIosSaveModal() {
+  if (elements.iosSaveModal) elements.iosSaveModal.classList.add('active');
+}
+
+function closeIosSaveModal() {
+  if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
+}
+
 /**
  * Trigger iOS Native Share Sheet to Save Directly into Apple Photos Library
+ * Synchronous invocation within direct user tap gesture to guarantee zero WebKit activation loss
  */
-async function triggerIosSaveToPhotos(blob, filename) {
-  const targetBlob = blob || state.lastIosBlob;
-  const targetFilename = filename || state.lastIosFilename || `GeoTag_${Date.now()}.jpg`;
-  if (!targetBlob) return false;
+function triggerIosSaveToPhotos(blob, filename) {
+  const targetBlob = blob || state.stampedBlob || state.lastIosBlob;
+  const targetFilename = filename || state.stampedFilename || state.lastIosFilename || `GeoTag_${Date.now()}.jpg`;
+  const targetFile = state.stampedFile || (targetBlob ? new File([targetBlob], targetFilename, { type: 'image/jpeg' }) : null);
 
-  const file = new File([targetBlob], targetFilename, { type: 'image/jpeg' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: targetFilename,
-        text: 'Geo-Tagged Photo'
-      });
-      showToast('📸 Saved to iPhone Photos!', 'success');
-      return true;
-    } catch (err) {
+  if (targetFile && navigator.canShare && navigator.canShare({ files: [targetFile] })) {
+    navigator.share({
+      files: [targetFile],
+      title: targetFilename,
+      text: 'Geo-Tagged Photo'
+    }).then(() => {
+      showToast('📸 Photo saved to Photos Library!', 'success');
+      closeIosSaveModal();
+    }).catch((err) => {
       if (err.name !== 'AbortError') {
-        console.warn('iOS share error:', err);
+        console.warn('iOS share error, downloading instead:', err);
+        downloadBlob(targetBlob, targetFilename);
       }
-      return false;
-    }
-  } else {
+    });
+    return true;
+  } else if (targetBlob) {
     downloadBlob(targetBlob, targetFilename);
     return false;
   }
+  return false;
 }
 
 /**
@@ -776,38 +847,24 @@ async function saveBlobToGalleryOrDevice(outputBlob, filename, isAutoSave = fals
     return;
   }
 
-  // 2. iOS Safari / iPhone / iPad Handling (Web Share to Photos Library + 1-Tap Action Banner)
+  // 2. iOS Safari / iPhone / iPad Handling (Web Share to Photos Library + 1-Tap Action Modal)
   if (isIOSDevice()) {
     state.lastIosBlob = outputBlob;
     state.lastIosFilename = filename;
+    state.stampedBlob = outputBlob;
+    state.stampedFilename = filename;
+    state.stampedFile = new File([outputBlob], filename, { type: 'image/jpeg' });
 
-    // Show the prominent iOS Photos Action Banner
+    // Show the prominent iOS Photos Action Banner above preview
     if (elements.iosPhotosBanner) {
       elements.iosPhotosBanner.style.display = 'flex';
     }
 
-    // Attempt native share sheet immediately (if user gesture token is still active)
-    try {
-      const file = new File([outputBlob], filename, { type: 'image/jpeg' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: filename,
-          text: 'Geo-Tagged Photo'
-        });
-        showToast('📸 Saved to iPhone Photos!', 'success');
-        return;
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.log('Immediate iOS share required fresh gesture:', err.message);
-      }
-    }
-
     if (isAutoSave) {
-      showToast('📸 Photo stamped! Tap "Save to Photos" above to add directly to your Photos Library.', 'info');
+      openIosSaveModal();
+      showToast('📸 Photo ready! Tap "Save to Photos" to add to your Photos Library.', 'info');
     } else {
-      showToast('📸 Ready! Tap "Save to Photos" above to add to your Photos Library.', 'info');
+      triggerIosSaveToPhotos(outputBlob, filename);
     }
     return;
   }
@@ -830,11 +887,23 @@ async function downloadActivePhoto() {
     showToast('Please select or upload a photo first.', 'error');
     return;
   }
+
+  // On iOS, if stamped file is already pregenerated in memory, trigger share synchronously!
+  if (isIOSDevice() && state.stampedFile) {
+    triggerIosSaveToPhotos(state.stampedBlob, state.stampedFilename);
+    return;
+  }
+
   const currentPhoto = state.photos[state.activePhotoIndex];
   showToast('Embedding binary EXIF GPS metadata...', 'info');
 
   const result = await generateStampedJpegBlob(currentPhoto);
   if (result) {
+    state.stampedBlob = result.outputBlob;
+    state.stampedFilename = result.filename;
+    state.stampedFile = new File([result.outputBlob], result.filename, { type: 'image/jpeg' });
+    state.lastIosBlob = result.outputBlob;
+    state.lastIosFilename = result.filename;
     await saveBlobToGalleryOrDevice(result.outputBlob, result.filename, false);
   }
 }
@@ -900,6 +969,21 @@ async function downloadAllZip() {
  */
 async function shareActivePhoto() {
   if (state.photos.length === 0) return;
+
+  // On Mobile / iOS Web, invoke share synchronously if file is already pregenerated
+  if (!window.AndroidBridge && state.stampedFile && navigator.canShare && navigator.canShare({ files: [state.stampedFile] })) {
+    navigator.share({
+      files: [state.stampedFile],
+      title: state.tagData.title,
+      text: `${state.tagData.title} • ${formatCoordinates(state.tagData.lat, state.tagData.lng)}`
+    }).then(() => {
+      showToast('Shared successfully!', 'success');
+    }).catch((err) => {
+      if (err.name !== 'AbortError') showToast('Share canceled or failed', 'error');
+    });
+    return;
+  }
+
   const currentPhoto = state.photos[state.activePhotoIndex];
 
   const canvas = await renderGeoTagPhoto(currentPhoto.img, state.tagData, state.options);
@@ -1797,6 +1881,22 @@ function setupEvents() {
     });
   }
 
+  // iOS Save Modal Handlers
+  if (elements.btnCloseIosSaveModal) elements.btnCloseIosSaveModal.addEventListener('click', closeIosSaveModal);
+  if (elements.btnIosModalSave) {
+    elements.btnIosModalSave.addEventListener('click', () => {
+      triggerIosSaveToPhotos(state.stampedBlob, state.stampedFilename);
+    });
+  }
+  if (elements.btnIosModalFiles) {
+    elements.btnIosModalFiles.addEventListener('click', () => {
+      if (state.stampedBlob && state.stampedFilename) {
+        downloadBlob(state.stampedBlob, state.stampedFilename);
+      }
+      closeIosSaveModal();
+    });
+  }
+
   // Install App PWA Handlers
   if (elements.btnInstallApp) elements.btnInstallApp.addEventListener('click', openInstallModal);
   if (elements.btnCloseInstallModal) elements.btnCloseInstallModal.addEventListener('click', closeInstallModal);
@@ -1849,7 +1949,9 @@ function closeInstallModal() {
 // Service Worker Registration
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      reg.update().catch(() => {});
+    }).catch(() => {});
   }
 }
 
