@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
   <link rel="stylesheet" href="./assets/leaflet/leaflet.css">
-  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.3">
+  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.4">
 </head>
 <body>
 
@@ -112,7 +112,11 @@
               <span id="photoMetrics" class="photo-metrics-badge">Ready for photo</span>
             </div>
 
-            <div class="toolbar-actions">
+            <!-- Stamped Photo Actions (Visible when photo is rendered) -->
+            <div class="toolbar-actions" id="stampedToolbarActions">
+              <button type="button" id="btnAcceptPhoto" class="btn-action-accept" title="Accept stamped photo and immediately save to Gallery / Photos">
+                ✅ Accept &amp; Save to Gallery
+              </button>
               <button type="button" id="btnRetakePhoto" class="btn-action-secondary" title="Retake photo using Camera">
                 📸 Retake
               </button>
@@ -128,8 +132,21 @@
               <button type="button" id="btnDownloadZip" class="btn-action-secondary" style="display:none" title="Download all batch photos in a single ZIP">
                 📦 ZIP
               </button>
-              <button type="button" id="btnDownload" class="btn-action-primary" disabled title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
-                📥 Download Geo-Tagged Photo
+              <button type="button" id="btnDownload" class="btn-action-secondary" style="display:none" disabled title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
+                📥 Download
+              </button>
+            </div>
+
+            <!-- Live Camera Viewfinder Actions (Visible while live camera stream is active in Section 1) -->
+            <div class="toolbar-actions" id="cameraLiveToolbarActions" style="display:none;">
+              <button type="button" id="btnFlipCamera" class="btn-action-secondary" style="display:none;" title="Switch between front and back camera">
+                🔄 Flip Camera
+              </button>
+              <button type="button" id="btnSnapLivePhoto" class="btn-action-snap" title="Capture photo now with live Geo-Tag stamp">
+                📸 Capture Photo
+              </button>
+              <button type="button" id="btnCancelLiveCamera" class="btn-action-secondary" title="Cancel live camera">
+                ❌ Cancel
               </button>
             </div>
           </div>
@@ -154,7 +171,7 @@
                 </button>
               </div>
               <div class="ios-banner-tip">
-                💡 <em>Tap <strong>"Save to Photos"</strong> ➔ tap <strong>"Save Image"</strong> (Photos icon), or tap &amp; hold the photo to save.</em>
+                💡 <em>Tap <strong>"Accept &amp; Save"</strong> or <strong>"Save to Photos"</strong> ➔ tap <strong>"Save Image"</strong> (Photos icon).</em>
               </div>
             </div>
 
@@ -164,6 +181,22 @@
               <span class="zoom-percent" id="zoomPercent">Fit</span>
               <button type="button" id="btnZoomIn" class="btn-canvas-zoom" title="Zoom In (Ctrl +)">🔍+</button>
               <button type="button" id="btnZoomReset" class="btn-canvas-zoom btn-zoom-reset" title="Fit to Screen">Fit</button>
+            </div>
+
+            <!-- In-Place Live Camera Viewfinder with Real-Time Geo-Tag Stamp Overlay -->
+            <div id="cameraStreamContainer" class="camera-stream-container" style="display:none;">
+              <video id="liveCameraVideo" autoplay playsinline muted class="live-camera-video"></video>
+              <div id="liveCameraStampOverlay" class="live-camera-stamp-overlay">
+                <div class="live-stamp-header">
+                  <span class="live-stamp-badge" id="liveStampBadge">📍 Geo-Tag Camera</span>
+                </div>
+                <div class="live-stamp-body">
+                  <div class="live-stamp-title" id="liveStampTitle">📍 Loading location...</div>
+                  <div class="live-stamp-address" id="liveStampAddress"></div>
+                  <div class="live-stamp-coords" id="liveStampCoords"></div>
+                  <div class="live-stamp-date" id="liveStampDate"></div>
+                </div>
+              </div>
             </div>
 
             <div id="emptyPlaceholder" class="empty-placeholder" style="display:none;">
@@ -331,7 +364,7 @@
           <div class="toggle-row">
             <span class="toggle-label">Show Event Note</span>
             <label class="switch">
-              <input type="checkbox" id="toggleShowNote" checked>
+              <input type="checkbox" id="toggleShowNote">
               <span class="slider"></span>
             </label>
           </div>
@@ -476,6 +509,6 @@
   <!-- Vendored Offline Scripts -->
   <script src="./assets/leaflet/leaflet.js"></script>
   <script src="./assets/vendor/jszip.min.js"></script>
-  <script src="./js/app.bundle.js?v=1.0.8.3"></script>
+  <script src="./js/app.bundle.js?v=1.0.8.4"></script>
 </body>
 </html>

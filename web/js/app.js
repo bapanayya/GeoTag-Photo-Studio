@@ -39,7 +39,7 @@ const state = {
     showMap: true,
     mapStyle: 'satellite',
     coordFormat: 'decimal',
-    showCustomNote: true,
+    showCustomNote: false,
     showBadge: true,
     badgeText: 'Geo-Tag Camera',
     bgColor: 'rgba(15, 23, 42, 0.82)'
@@ -72,8 +72,22 @@ function initDom() {
   elements.dropzone = document.getElementById('dropzone');
   elements.previewStageWrapper = document.getElementById('previewStageWrapper');
   elements.previewToolbar = document.getElementById('previewToolbar');
+  elements.stampedToolbarActions = document.getElementById('stampedToolbarActions');
+  elements.cameraLiveToolbarActions = document.getElementById('cameraLiveToolbarActions');
+  elements.btnAcceptPhoto = document.getElementById('btnAcceptPhoto');
   elements.btnRetakePhoto = document.getElementById('btnRetakePhoto');
   elements.btnChangePhoto = document.getElementById('btnChangePhoto');
+  elements.btnFlipCamera = document.getElementById('btnFlipCamera');
+  elements.btnSnapLivePhoto = document.getElementById('btnSnapLivePhoto');
+  elements.btnCancelLiveCamera = document.getElementById('btnCancelLiveCamera');
+  elements.cameraStreamContainer = document.getElementById('cameraStreamContainer');
+  elements.liveCameraVideo = document.getElementById('liveCameraVideo');
+  elements.liveCameraStampOverlay = document.getElementById('liveCameraStampOverlay');
+  elements.liveStampBadge = document.getElementById('liveStampBadge');
+  elements.liveStampTitle = document.getElementById('liveStampTitle');
+  elements.liveStampAddress = document.getElementById('liveStampAddress');
+  elements.liveStampCoords = document.getElementById('liveStampCoords');
+  elements.liveStampDate = document.getElementById('liveStampDate');
   elements.fileInput = document.getElementById('fileInput');
   elements.cameraInput = document.getElementById('cameraInput');
   elements.btnUpload = document.getElementById('btnUpload');
@@ -114,10 +128,16 @@ function initDom() {
   // Metrics
   elements.photoMetrics = document.getElementById('photoMetrics');
 
-  // On iOS devices, adapt the download button text to "Save to Photos"
-  if (isIOSDevice() && elements.btnDownload) {
-    elements.btnDownload.innerHTML = '<span>🖼️</span> <span>Save to Photos</span>';
-    elements.btnDownload.title = 'Save directly into Apple Photos Library (Camera Roll)';
+  // On iOS devices, adapt the accept/download button text to "Accept & Save to Photos"
+  if (isIOSDevice()) {
+    if (elements.btnAcceptPhoto) {
+      elements.btnAcceptPhoto.innerHTML = '<span>🖼️</span> <span>Accept &amp; Save to Photos</span>';
+      elements.btnAcceptPhoto.title = 'Save directly into Apple Photos Library (Camera Roll)';
+    }
+    if (elements.btnDownload) {
+      elements.btnDownload.innerHTML = '<span>🖼️</span> <span>Save to Photos</span>';
+      elements.btnDownload.title = 'Save directly into Apple Photos Library (Camera Roll)';
+    }
   }
 
   // Input Fields
@@ -365,6 +385,7 @@ function syncStateToInputs() {
   if (elements.inputLng) elements.inputLng.value = (state.tagData.lng || 0).toFixed(6);
   if (elements.inputNote) elements.inputNote.value = state.tagData.customNote || '';
   if (elements.inputBadgeText) elements.inputBadgeText.value = state.options.badgeText || '';
+  if (elements.toggleShowNote) elements.toggleShowNote.checked = Boolean(state.options.showCustomNote);
 
   if (elements.inputDate && state.tagData.date) {
     const d = state.tagData.date;
@@ -384,6 +405,7 @@ function syncInputsToState() {
   if (elements.inputLng) state.tagData.lng = parseFloat(elements.inputLng.value) || 0;
   if (elements.inputNote) state.tagData.customNote = elements.inputNote.value;
   if (elements.inputBadgeText) state.options.badgeText = elements.inputBadgeText.value;
+  if (elements.toggleShowNote) state.options.showCustomNote = elements.toggleShowNote.checked;
 
   if (elements.inputDate && elements.inputDate.value) {
     state.tagData.date = new Date(elements.inputDate.value);
@@ -405,6 +427,14 @@ function initInitialState() {
   if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'none';
   if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
   if (elements.canvasStage) elements.canvasStage.style.display = 'none';
+  if (elements.cameraStreamContainer) elements.cameraStreamContainer.style.display = 'none';
+  if (elements.cameraLiveToolbarActions) elements.cameraLiveToolbarActions.style.display = 'none';
+  if (elements.stampedToolbarActions) elements.stampedToolbarActions.style.display = 'flex';
+  if (elements.btnAcceptPhoto) {
+    elements.btnAcceptPhoto.disabled = true;
+    elements.btnAcceptPhoto.innerHTML = isIOSDevice() ? '<span>🖼️</span> <span>Accept &amp; Save to Photos</span>' : '<span>✅</span> <span>Accept &amp; Save to Gallery</span>';
+    elements.btnAcceptPhoto.style.background = '';
+  }
   if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
   if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
   if (elements.outputImg) {
@@ -431,6 +461,7 @@ function initInitialState() {
 }
 
 function clearPhotos() {
+  closeLiveCamera();
   state.photos = [];
   state.activePhotoIndex = 0;
   state.lastIosBlob = null;
@@ -541,33 +572,37 @@ async function handleFiles(fileList, { source = 'upload' } = {}) {
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
+    if (elements.btnAcceptPhoto) elements.btnAcceptPhoto.disabled = false;
+    if (elements.btnAcceptPhoto) {
+      elements.btnAcceptPhoto.disabled = false;
+      elements.btnAcceptPhoto.innerHTML = isIOSDevice() ? '<span>🖼️</span> <span>Accept &amp; Save to Photos</span>' : '<span>✅</span> <span>Accept &amp; Save to Gallery</span>';
+      elements.btnAcceptPhoto.style.background = '';
+    }
 
     syncStateToInputs();
     await performRender();
 
-    if (isCamera) {
-      // User captured camera photograph: immediately save stamped photo to Gallery/Photos without waiting
-      const currentPhoto = state.photos[state.activePhotoIndex];
-      const result = await generateStampedJpegBlob(currentPhoto);
-      if (result) {
-        state.stampedBlob = result.outputBlob;
-        state.stampedFilename = result.filename;
-        state.stampedFile = new File([result.outputBlob], result.filename, { type: 'image/jpeg' });
-        state.lastIosBlob = result.outputBlob;
-        state.lastIosFilename = result.filename;
+    // Pregenerate high-resolution stamped photo in memory for instant acceptance
+    const currentPhoto = state.photos[state.activePhotoIndex];
+    const result = await generateStampedJpegBlob(currentPhoto);
+    if (result) {
+      state.stampedBlob = result.outputBlob;
+      state.stampedFilename = result.filename;
+      state.stampedFile = new File([result.outputBlob], result.filename, { type: 'image/jpeg' });
+      state.lastIosBlob = result.outputBlob;
+      state.lastIosFilename = result.filename;
 
-        await saveBlobToGalleryOrDevice(result.outputBlob, result.filename, true);
-        if (elements.photoMetrics) {
-          if (isIOSDevice()) {
-            elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Ready for iPhone Photos 📸`;
-          } else {
-            elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Auto-saved to Gallery / Photos 📸`;
-          }
-        }
+      if (elements.photoMetrics) {
+        elements.photoMetrics.textContent = `${result.canvas.width} × ${result.canvas.height} px • Ready to accept`;
       }
+    }
+
+    if (isCamera) {
+      // User captured camera photograph: single final preview in Section 1, ready for immediate acceptance
+      showToast('Geo-Tag stamped photo ready! Tap "Accept & Save to Gallery" to save.', 'info');
     } else {
-      // User uploaded picture: preview on canvas and allow user to download when ready
-      showToast(`${validFiles.length} photo(s) ready! Preview the stamped photo and click Download when ready.`, 'info');
+      // User uploaded picture: preview on canvas and allow user to accept & download when ready
+      showToast(`${validFiles.length} photo(s) ready! Preview the stamped photo and tap Accept to save.`, 'info');
     }
   } else {
     initInitialState();
@@ -634,6 +669,7 @@ async function performRender() {
     if (elements.btnDownload) elements.btnDownload.disabled = true;
     if (elements.btnShare) elements.btnShare.disabled = true;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'none';
+    if (elements.btnAcceptPhoto) elements.btnAcceptPhoto.disabled = true;
     return;
   }
   const currentPhoto = state.photos[state.activePhotoIndex];
@@ -672,6 +708,7 @@ async function performRender() {
     if (elements.btnDownload) elements.btnDownload.disabled = false;
     if (elements.btnShare) elements.btnShare.disabled = false;
     if (elements.btnClearPhoto) elements.btnClearPhoto.style.display = 'inline-flex';
+    if (elements.btnAcceptPhoto) elements.btnAcceptPhoto.disabled = false;
 
     // Update Output Canvas - clear completely before drawing new stamped photo
     elements.outputCanvas.width = canvas.width;
@@ -1132,51 +1169,124 @@ function confirmMapLocation() {
 }
 
 /**
- * Live Camera Viewfinder Management (Desktop & Mobile)
+ * In-Place Live Camera Viewfinder & Real-Time Geo-Tag Stamp Overlay
  */
+let liveCameraStream = null;
 let webcamStream = null;
+let currentFacingMode = 'environment';
+let liveOverlayTimer = null;
 
-function openCameraModal() {
+function updateLiveCameraStampOverlay() {
+  if (!elements.liveCameraStampOverlay) return;
+  if (elements.liveStampBadge) {
+    elements.liveStampBadge.textContent = state.options.showBadge ? (state.options.badgeText || 'Geo-Tag Camera') : '📍 Geo-Tag Camera';
+  }
+  if (elements.liveStampTitle) {
+    elements.liveStampTitle.textContent = '📍 ' + (state.tagData.title || 'Location');
+  }
+  if (elements.liveStampAddress) {
+    elements.liveStampAddress.textContent = state.tagData.address || '';
+  }
+  if (elements.liveStampCoords) {
+    const lat = (state.tagData.lat || 0).toFixed(6);
+    const lng = (state.tagData.lng || 0).toFixed(6);
+    elements.liveStampCoords.textContent = `Lat ${lat}°  Long ${lng}°`;
+  }
+  if (elements.liveStampDate) {
+    const now = new Date();
+    elements.liveStampDate.textContent = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+  }
+}
+
+async function openLiveCamera() {
   if (window.AndroidBridge && window.AndroidBridge.openCamera) {
     window.AndroidBridge.openCamera();
     return;
   }
 
-  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  if (isMobile) {
-    elements.cameraInput.click();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (elements.cameraInput) elements.cameraInput.click();
     return;
   }
 
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user' }
-    })
-    .then((stream) => {
-      webcamStream = stream;
-      if (elements.webcamVideo) elements.webcamVideo.srcObject = stream;
-      if (elements.cameraModal) elements.cameraModal.classList.add('active');
-    })
-    .catch((err) => {
-      console.warn('Webcam access error or permission denied, falling back to camera input:', err);
+  try {
+    closeLiveCamera();
+
+    // Switch Section 1 to Live Camera Mode
+    if (elements.dropzone) elements.dropzone.style.display = 'none';
+    if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'flex';
+    if (elements.canvasStage) elements.canvasStage.style.display = 'none';
+    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
+    if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
+    if (elements.cameraStreamContainer) elements.cameraStreamContainer.style.display = 'flex';
+    if (elements.stampedToolbarActions) elements.stampedToolbarActions.style.display = 'none';
+    if (elements.cameraLiveToolbarActions) elements.cameraLiveToolbarActions.style.display = 'flex';
+    if (elements.photoMetrics) elements.photoMetrics.textContent = '📸 Live Camera • Real-time Geo-Tag Viewfinder';
+
+    updateLiveCameraStampOverlay();
+    clearInterval(liveOverlayTimer);
+    liveOverlayTimer = setInterval(updateLiveCameraStampOverlay, 1000);
+
+    const constraints = {
+      video: {
+        facingMode: { ideal: currentFacingMode },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    liveCameraStream = stream;
+    webcamStream = stream;
+    if (elements.liveCameraVideo) {
+      elements.liveCameraVideo.srcObject = stream;
+      await elements.liveCameraVideo.play().catch(() => {});
+    }
+
+    if (navigator.mediaDevices.enumerateDevices && elements.btnFlipCamera) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+        if (videoDevices.length > 1) {
+          elements.btnFlipCamera.style.display = 'inline-flex';
+        }
+      } catch (e) {}
+    }
+  } catch (err) {
+    console.warn('Live camera error or permission denied, falling back to camera input:', err);
+    closeLiveCamera();
+    if (elements.cameraInput) {
       elements.cameraInput.click();
-    });
-  } else {
-    elements.cameraInput.click();
+    } else {
+      showToast('Could not access camera: ' + err.message, 'error');
+      initInitialState();
+    }
   }
 }
 
-function closeCameraModal() {
-  if (elements.cameraModal) elements.cameraModal.classList.remove('active');
-  if (webcamStream) {
-    webcamStream.getTracks().forEach((track) => track.stop());
-    webcamStream = null;
+function closeLiveCamera() {
+  clearInterval(liveOverlayTimer);
+  liveOverlayTimer = null;
+  if (liveCameraStream) {
+    liveCameraStream.getTracks().forEach((track) => track.stop());
+    liveCameraStream = null;
   }
+  webcamStream = null;
+  if (elements.liveCameraVideo) {
+    elements.liveCameraVideo.srcObject = null;
+  }
+  if (elements.cameraStreamContainer) elements.cameraStreamContainer.style.display = 'none';
+  if (elements.cameraLiveToolbarActions) elements.cameraLiveToolbarActions.style.display = 'none';
+  if (elements.stampedToolbarActions) elements.stampedToolbarActions.style.display = 'flex';
 }
 
-function snapWebcamPhoto() {
-  const video = elements.webcamVideo;
-  if (!video || !video.videoWidth) return;
+function snapLivePhoto() {
+  const video = elements.liveCameraVideo || elements.webcamVideo;
+  if (!video || !video.videoWidth) {
+    showToast('Camera is still initializing...', 'info');
+    return;
+  }
 
   const snapCanvas = document.createElement('canvas');
   snapCanvas.width = video.videoWidth;
@@ -1184,12 +1294,85 @@ function snapWebcamPhoto() {
   const ctx = snapCanvas.getContext('2d');
   ctx.drawImage(video, 0, 0);
 
+  closeLiveCamera();
+
   snapCanvas.toBlob((blob) => {
-    closeCameraModal();
-    if (!blob) return;
+    if (!blob) {
+      showToast('Could not capture frame from camera', 'error');
+      initInitialState();
+      return;
+    }
     const file = new File([blob], `Camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
     handleFiles([file], { source: 'camera' });
   }, 'image/jpeg', 0.95);
+}
+
+async function flipLiveCamera() {
+  currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+  await openLiveCamera();
+}
+
+function openCameraModal() {
+  openLiveCamera();
+}
+
+function closeCameraModal() {
+  closeLiveCamera();
+  if (elements.cameraModal) elements.cameraModal.classList.remove('active');
+}
+
+function snapWebcamPhoto() {
+  snapLivePhoto();
+}
+
+/**
+ * Accept & Save Stamped Photo to Gallery / Photos
+ */
+async function acceptAndSaveActivePhoto() {
+  if (state.photos.length === 0) return;
+  const currentPhoto = state.photos[state.activePhotoIndex];
+  if (!currentPhoto || !currentPhoto.img) return;
+
+  try {
+    let blob = state.stampedBlob;
+    let filename = state.stampedFilename;
+
+    if (!blob) {
+      const result = await generateStampedJpegBlob(currentPhoto);
+      if (result) {
+        blob = result.outputBlob;
+        filename = result.filename;
+        state.stampedBlob = blob;
+        state.stampedFilename = filename;
+        state.stampedFile = new File([blob], filename, { type: 'image/jpeg' });
+        state.lastIosBlob = blob;
+        state.lastIosFilename = filename;
+      }
+    }
+
+    if (!blob) {
+      showToast('Could not prepare stamped photo for saving', 'error');
+      return;
+    }
+
+    if (isIOSDevice()) {
+      await triggerIosSaveToPhotos(blob, filename);
+    } else {
+      await saveBlobToGalleryOrDevice(blob, filename, true);
+    }
+
+    if (elements.btnAcceptPhoto) {
+      elements.btnAcceptPhoto.innerHTML = isIOSDevice() ? '<span>✅</span> <span>Saved to Apple Photos</span>' : '<span>✅</span> <span>Saved to Gallery / Photos</span>';
+      elements.btnAcceptPhoto.style.background = '#059669';
+    }
+    if (elements.photoMetrics) {
+      elements.photoMetrics.textContent = `${elements.outputCanvas.width} × ${elements.outputCanvas.height} px • Auto-saved to Gallery / Photos 📸`;
+    }
+    showToast('Photo accepted & saved to Gallery / Photos! 📸', 'success');
+  } catch (err) {
+    console.error('Accept and save error:', err);
+    showToast('Error saving photo: ' + err.message, 'error');
+  }
 }
 
 /**
@@ -1862,15 +2045,24 @@ function setupEvents() {
   if (elements.btnCloseMapModal) elements.btnCloseMapModal.addEventListener('click', () => elements.mapModal.classList.remove('active'));
   if (elements.btnConfirmMapLocation) elements.btnConfirmMapLocation.addEventListener('click', confirmMapLocation);
 
-  // Download & Share & Clear & Retake & Change
+  // Accept & Download & Share & Clear & Retake & Change
+  if (elements.btnAcceptPhoto) elements.btnAcceptPhoto.addEventListener('click', acceptAndSaveActivePhoto);
   if (elements.btnClearPhoto) elements.btnClearPhoto.addEventListener('click', clearPhotos);
   if (elements.btnRetakePhoto) elements.btnRetakePhoto.addEventListener('click', openCameraModal);
   if (elements.btnChangePhoto) elements.btnChangePhoto.addEventListener('click', () => {
     if (elements.fileInput) elements.fileInput.click();
   });
-  if (elements.btnDownload) elements.btnDownload.addEventListener('click', downloadActivePhoto);
+  if (elements.btnDownload) elements.btnDownload.addEventListener('click', acceptAndSaveActivePhoto);
   if (elements.btnDownloadZip) elements.btnDownloadZip.addEventListener('click', downloadAllZip);
   if (elements.btnShare) elements.btnShare.addEventListener('click', shareActivePhoto);
+
+  // Live Camera Viewfinder Controls
+  if (elements.btnSnapLivePhoto) elements.btnSnapLivePhoto.addEventListener('click', snapLivePhoto);
+  if (elements.btnCancelLiveCamera) elements.btnCancelLiveCamera.addEventListener('click', () => {
+    closeLiveCamera();
+    initInitialState();
+  });
+  if (elements.btnFlipCamera) elements.btnFlipCamera.addEventListener('click', flipLiveCamera);
 
   // iOS Save to Photos and Files Banner Buttons
   if (elements.btnIosSaveToPhotos) {

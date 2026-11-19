@@ -30,7 +30,7 @@ export const DEFAULT_OPTIONS = {
   mapStyle: 'satellite', // 'satellite', 'street', 'terrain', 'vector-offline'
   coordFormat: 'decimal', // 'decimal', 'dms'
   showAltitude: false,
-  showCustomNote: true,
+  showCustomNote: false,
   showBadge: true,
   badgeText: 'Geo-Tag Camera',
 
