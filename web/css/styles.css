@@ -433,11 +433,63 @@ html, body {
   overflow: hidden;
 }
 
-/* Left Sidebar Controls */
+/* Photo Workspace Panel (Merged Capture, Upload & Immediate Live Preview) */
+.photo-workspace-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.photo-workspace-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.photo-workspace-panel::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 3px;
+}
+
+.photo-panel-title {
+  padding: 14px 16px 8px;
+  margin-bottom: 0;
+}
+
+.photo-workspace-panel .dropzone {
+  margin: 16px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-stage-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background-color: #0b0f19;
+}
+
+.preview-stage-wrapper .canvas-viewport {
+  flex: 1;
+  min-height: 420px;
+}
+
+/* Settings Sidebar Controls (Right Panel on Desktop) */
 .sidebar-controls {
   width: var(--sidebar-width);
   background-color: var(--bg-surface);
-  border-right: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -923,8 +975,9 @@ input:checked + .slider:before {
   transform: translateX(18px);
 }
 
-/* Right Canvas Preview Area */
-.preview-panel {
+/* Canvas Preview Area */
+.preview-panel,
+.preview-stage-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -943,6 +996,8 @@ input:checked + .slider:before {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .toolbar-left {
@@ -1462,16 +1517,53 @@ input:checked + .slider:before {
     overflow: visible;
   }
 
+  .photo-workspace-panel {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .photo-workspace-panel .dropzone {
+    margin: 10px 12px;
+    min-height: 180px;
+  }
+
+  .preview-stage-wrapper {
+    height: auto;
+    overflow: visible;
+  }
+
+  .preview-stage-wrapper .canvas-viewport {
+    min-height: 280px;
+    max-height: 55vh;
+    padding: 12px 8px;
+  }
+
   .sidebar-controls {
     width: 100%;
     height: auto;
     overflow: visible;
+    border-left: none;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
   }
 
   .preview-panel {
-    min-height: 480px;
+    display: none;
+  }
+
+  .toolbar-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .toolbar-actions .btn-action-primary,
+  .toolbar-actions .btn-action-secondary,
+  .toolbar-actions .btn-action-danger {
+    padding: 6px 10px;
+    font-size: 0.78rem;
   }
 
   .app-footer {

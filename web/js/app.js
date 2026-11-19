@@ -68,9 +68,14 @@ export function isIOSDevice() {
 }
 
 function initDom() {
+  elements.photoWorkspacePanel = document.getElementById('photoWorkspacePanel');
+  elements.dropzone = document.getElementById('dropzone');
+  elements.previewStageWrapper = document.getElementById('previewStageWrapper');
+  elements.previewToolbar = document.getElementById('previewToolbar');
+  elements.btnRetakePhoto = document.getElementById('btnRetakePhoto');
+  elements.btnChangePhoto = document.getElementById('btnChangePhoto');
   elements.fileInput = document.getElementById('fileInput');
   elements.cameraInput = document.getElementById('cameraInput');
-  elements.dropzone = document.getElementById('dropzone');
   elements.btnUpload = document.getElementById('btnUpload');
   elements.btnCamera = document.getElementById('btnCamera');
   elements.batchGallery = document.getElementById('batchGallery');
@@ -95,6 +100,19 @@ function initDom() {
   elements.presetSelectSidebar = document.getElementById('presetSelectSidebar');
   elements.btnSaveFavorite = document.getElementById('btnSaveFavorite');
   elements.btnDeleteFavorite = document.getElementById('btnDeleteFavorite');
+
+  // Action Buttons
+  elements.btnCurrentGps = document.getElementById('btnCurrentGps');
+  elements.btnOpenMap = document.getElementById('btnOpenMap');
+  elements.btnClearPhoto = document.getElementById('btnClearPhoto');
+  elements.btnDownload = document.getElementById('btnDownload');
+  elements.btnDownloadZip = document.getElementById('btnDownloadZip');
+  elements.btnShare = document.getElementById('btnShare');
+  elements.btnTimeNow = document.getElementById('btnTimeNow');
+  elements.btnTimeExif = document.getElementById('btnTimeExif');
+
+  // Metrics
+  elements.photoMetrics = document.getElementById('photoMetrics');
 
   // On iOS devices, adapt the download button text to "Save to Photos"
   if (isIOSDevice() && elements.btnDownload) {
@@ -124,19 +142,6 @@ function initDom() {
   elements.toggleShowNote = document.getElementById('toggleShowNote');
   elements.toggleShowBadge = document.getElementById('toggleShowBadge');
   elements.inputBadgeText = document.getElementById('inputBadgeText');
-
-  // Action Buttons
-  elements.btnCurrentGps = document.getElementById('btnCurrentGps');
-  elements.btnOpenMap = document.getElementById('btnOpenMap');
-  elements.btnClearPhoto = document.getElementById('btnClearPhoto');
-  elements.btnDownload = document.getElementById('btnDownload');
-  elements.btnDownloadZip = document.getElementById('btnDownloadZip');
-  elements.btnShare = document.getElementById('btnShare');
-  elements.btnTimeNow = document.getElementById('btnTimeNow');
-  elements.btnTimeExif = document.getElementById('btnTimeExif');
-
-  // Metrics
-  elements.photoMetrics = document.getElementById('photoMetrics');
 
   // Modals
   elements.mapModal = document.getElementById('mapModal');
@@ -396,7 +401,9 @@ function initInitialState() {
   state.stampedBlob = null;
   state.stampedFile = null;
   state.stampedFilename = null;
-  if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+  if (elements.dropzone) elements.dropzone.style.display = 'flex';
+  if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'none';
+  if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
   if (elements.canvasStage) elements.canvasStage.style.display = 'none';
   if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
   if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
@@ -607,7 +614,9 @@ function triggerRender() {
 
 async function performRender() {
   if (state.photos.length === 0) {
-    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.dropzone) elements.dropzone.style.display = 'flex';
+  if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'none';
+  if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
     if (elements.canvasStage) elements.canvasStage.style.display = 'none';
     if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
     if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
@@ -629,7 +638,9 @@ async function performRender() {
   }
   const currentPhoto = state.photos[state.activePhotoIndex];
   if (!currentPhoto || !currentPhoto.img) {
-    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'flex';
+    if (elements.dropzone) elements.dropzone.style.display = 'flex';
+  if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'none';
+  if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
     if (elements.canvasStage) elements.canvasStage.style.display = 'none';
     if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
     if (elements.iosSaveModal) elements.iosSaveModal.classList.remove('active');
@@ -652,7 +663,9 @@ async function performRender() {
     state.isRendering = true;
     const canvas = await renderGeoTagPhoto(currentPhoto.img, state.tagData, state.options);
 
-    // Show output canvas, hide empty placeholder, and enable download/share
+    // Show preview stage, hide dropzone, and enable download/share
+    if (elements.dropzone) elements.dropzone.style.display = 'none';
+    if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'flex';
     if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
     if (elements.canvasStage) elements.canvasStage.style.display = 'flex';
     if (elements.canvasZoomBar) elements.canvasZoomBar.style.display = 'flex';
@@ -728,7 +741,6 @@ async function pregenerateStampedFile() {
   } catch (err) {
     console.warn('Background pregeneration error:', err);
   }
-}
 }
 
 /**
@@ -1850,8 +1862,12 @@ function setupEvents() {
   if (elements.btnCloseMapModal) elements.btnCloseMapModal.addEventListener('click', () => elements.mapModal.classList.remove('active'));
   if (elements.btnConfirmMapLocation) elements.btnConfirmMapLocation.addEventListener('click', confirmMapLocation);
 
-  // Download & Share & Clear
+  // Download & Share & Clear & Retake & Change
   if (elements.btnClearPhoto) elements.btnClearPhoto.addEventListener('click', clearPhotos);
+  if (elements.btnRetakePhoto) elements.btnRetakePhoto.addEventListener('click', openCameraModal);
+  if (elements.btnChangePhoto) elements.btnChangePhoto.addEventListener('click', () => {
+    if (elements.fileInput) elements.fileInput.click();
+  });
   if (elements.btnDownload) elements.btnDownload.addEventListener('click', downloadActivePhoto);
   if (elements.btnDownloadZip) elements.btnDownloadZip.addEventListener('click', downloadAllZip);
   if (elements.btnShare) elements.btnShare.addEventListener('click', shareActivePhoto);

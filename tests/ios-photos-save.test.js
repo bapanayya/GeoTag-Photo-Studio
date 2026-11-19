@@ -40,7 +40,7 @@ assert(indexHtml.includes('id="btnIosModalSave"'), 'index.html must include #btn
 const swJsPath = path.join(rootDir, 'web', 'sw.js');
 const swJs = fs.readFileSync(swJsPath, 'utf8');
 
-assert(swJs.includes('geotag-studio-v3'), 'sw.js must bump cache version to geotag-studio-v3');
+assert(/geotag-studio-v[3-9]/.test(swJs), 'sw.js must bump cache version');
 assert(swJs.includes("navigate") && swJs.includes(".js"), 'sw.js must use network-first for immediate updates');
 
 // 3. Verify web/css/styles.css styling

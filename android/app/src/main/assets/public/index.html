@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
   <link rel="stylesheet" href="./assets/leaflet/leaflet.css">
-  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.2">
+  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.3">
 </head>
 <body>
 
@@ -80,35 +80,110 @@
 
     <!-- Main Workspace -->
     <div class="app-workspace">
-      <!-- Left Sidebar Controls -->
-      <aside class="sidebar-controls">
+      <!-- 1. Photo Capture, Upload & Immediate Geo-Tag Live Preview Section -->
+      <section class="photo-workspace-panel" id="photoWorkspacePanel">
+        <div class="section-title photo-panel-title">
+          <span>📷</span>
+          <span>Photo &amp; Live Geo-Tag Preview</span>
+        </div>
 
-        <!-- 1. Photo Upload Section -->
-        <section class="control-section">
-          <div class="section-title">
-            <span>📷</span>
-            <span>Select Photos</span>
+        <!-- State A: Photo Selection / Dropzone Card (Visible when no photo is loaded) -->
+        <div id="dropzone" class="dropzone">
+          <div class="dropzone-icon">🖼️</div>
+          <div class="dropzone-text">Drag &amp; Drop photos here</div>
+          <div class="dropzone-subtext">Camera captures auto-save to Gallery • Uploaded photos preview &amp; download</div>
+          <div class="dropzone-actions">
+            <button type="button" id="btnUpload" class="btn-upload" title="Upload photos from device to preview and download">
+              📂 Browse Files
+            </button>
+            <button type="button" id="btnCamera" class="btn-camera" title="Take photo with camera &amp; immediately save to Gallery/Photos with Geo-Tag stamp">
+              📸 Camera (Auto-Save)
+            </button>
           </div>
+          <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+        </div>
 
-          <div id="dropzone" class="dropzone">
-            <div class="dropzone-icon">🖼️</div>
-            <div class="dropzone-text">Drag &amp; Drop photos here</div>
-            <div class="dropzone-subtext">Camera captures auto-save to Gallery • Uploaded photos can be previewed &amp; downloaded</div>
-            <div class="dropzone-actions">
-              <button type="button" id="btnUpload" class="btn-upload" title="Upload photos from device to preview and download">
-                📂 Browse Files
+        <!-- State B: Merged Immediate Live Preview Container (Visible when photo is accepted/loaded) -->
+        <div id="previewStageWrapper" class="preview-stage-wrapper" style="display:none;">
+          <!-- Top Action Toolbar -->
+          <div class="preview-toolbar" id="previewToolbar">
+            <div class="toolbar-left">
+              <span id="photoMetrics" class="photo-metrics-badge">Ready for photo</span>
+            </div>
+
+            <div class="toolbar-actions">
+              <button type="button" id="btnRetakePhoto" class="btn-action-secondary" title="Retake photo using Camera">
+                📸 Retake
               </button>
-              <button type="button" id="btnCamera" class="btn-camera" title="Take photo with camera &amp; immediately save to Gallery/Photos with Geo-Tag stamp">
-                📸 Camera (Auto-Save)
+              <button type="button" id="btnChangePhoto" class="btn-action-secondary" title="Choose a different image from files">
+                📂 Change
+              </button>
+              <button type="button" id="btnClearPhoto" class="btn-action-danger" title="Clear loaded photo">
+                🗑️ Clear
+              </button>
+              <button type="button" id="btnShare" class="btn-action-secondary" disabled title="Share via Mobile / Android apps">
+                📤 Share
+              </button>
+              <button type="button" id="btnDownloadZip" class="btn-action-secondary" style="display:none" title="Download all batch photos in a single ZIP">
+                📦 ZIP
+              </button>
+              <button type="button" id="btnDownload" class="btn-action-primary" disabled title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
+                📥 Download Geo-Tagged Photo
               </button>
             </div>
-            <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
-            <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+          </div>
+
+          <!-- Canvas Viewport -->
+          <div class="canvas-viewport" id="canvasViewport">
+            <!-- iOS Photos Save Banner -->
+            <div id="iosPhotosBanner" class="ios-photos-banner" style="display:none;">
+              <div class="ios-banner-info">
+                <span class="ios-banner-icon">📱</span>
+                <div class="ios-banner-text">
+                  <strong>iPhone / iPad Photo Ready!</strong>
+                  <span>Save directly into your <strong>Photos Library (Camera Roll)</strong>:</span>
+                </div>
+              </div>
+              <div class="ios-banner-actions">
+                <button type="button" id="btnIosSaveToPhotos" class="btn-ios-save" title="Save directly into Apple Photos Library (Camera Roll)">
+                  🖼️ Save to Photos
+                </button>
+                <button type="button" id="btnIosDownloadFiles" class="btn-ios-files" title="Download copy to Files app">
+                  📁 Files
+                </button>
+              </div>
+              <div class="ios-banner-tip">
+                💡 <em>Tap <strong>"Save to Photos"</strong> ➔ tap <strong>"Save Image"</strong> (Photos icon), or tap &amp; hold the photo to save.</em>
+              </div>
+            </div>
+
+            <!-- Canvas Floating Zoom Bar -->
+            <div class="canvas-zoom-bar" id="canvasZoomBar" style="display:none;" aria-label="Photo Zoom Controls">
+              <button type="button" id="btnZoomOut" class="btn-canvas-zoom" title="Zoom Out (Ctrl -)">🔍−</button>
+              <span class="zoom-percent" id="zoomPercent">Fit</span>
+              <button type="button" id="btnZoomIn" class="btn-canvas-zoom" title="Zoom In (Ctrl +)">🔍+</button>
+              <button type="button" id="btnZoomReset" class="btn-canvas-zoom btn-zoom-reset" title="Fit to Screen">Fit</button>
+            </div>
+
+            <div id="emptyPlaceholder" class="empty-placeholder" style="display:none;">
+              <div class="empty-icon">📍</div>
+              <h2 class="empty-title">No Photo Loaded Yet</h2>
+              <p class="empty-desc">Upload or take a photo to stamp custom location details, map snippet, and binary EXIF metadata.</p>
+            </div>
+            <div class="canvas-stage" id="canvasStage" style="display:none;">
+              <canvas id="outputCanvas" style="display:none"></canvas>
+              <img id="outputImg" class="output-img" alt="Geo-Tagged Stamped Photo" style="display:none;">
+            </div>
           </div>
 
           <!-- Batch Thumbnails Gallery -->
           <div id="batchGallery" class="batch-gallery" style="display:none"></div>
-        </section>
+        </div>
+      </section>
+
+      <!-- Settings & Customization Controls -->
+      <aside class="sidebar-controls" id="sidebarControls">
 
         <!-- 2. Location Details Section -->
         <section class="control-section">
@@ -276,73 +351,6 @@
         </section>
 
       </aside>
-
-      <!-- Right Main Panel / Live Preview -->
-      <main class="preview-panel">
-        <div class="preview-toolbar">
-          <div class="toolbar-left">
-            <span id="photoMetrics" class="photo-metrics-badge">Ready for photo</span>
-          </div>
-
-          <div class="toolbar-actions">
-            <button type="button" id="btnClearPhoto" class="btn-action-danger" style="display:none" title="Clear loaded photo and return to blank canvas">
-              🗑️ Clear Photo
-            </button>
-            <button type="button" id="btnShare" class="btn-action-secondary" disabled title="Share via Android or Mobile apps">
-              📤 Share
-            </button>
-            <button type="button" id="btnDownloadZip" class="btn-action-secondary" style="display:none" title="Download all batch photos in a single ZIP">
-              📦 Download All (ZIP)
-            </button>
-            <button type="button" id="btnDownload" class="btn-action-primary" disabled title="Download stamped high-resolution JPEG with embedded EXIF GPS tags">
-              📥 Download Geo-Tagged Photo
-            </button>
-          </div>
-        </div>
-
-        <!-- Canvas Viewport -->
-        <div class="canvas-viewport" id="canvasViewport">
-          <!-- iOS Photos Save Banner -->
-          <div id="iosPhotosBanner" class="ios-photos-banner" style="display:none;">
-            <div class="ios-banner-info">
-              <span class="ios-banner-icon">📱</span>
-              <div class="ios-banner-text">
-                <strong>iPhone / iPad Photo Ready!</strong>
-                <span>Save directly into your <strong>Photos Library (Camera Roll)</strong>:</span>
-              </div>
-            </div>
-            <div class="ios-banner-actions">
-              <button type="button" id="btnIosSaveToPhotos" class="btn-ios-save" title="Save directly into Apple Photos Library (Camera Roll)">
-                🖼️ Save to Photos
-              </button>
-              <button type="button" id="btnIosDownloadFiles" class="btn-ios-files" title="Download copy to Files app">
-                📁 Files
-              </button>
-            </div>
-            <div class="ios-banner-tip">
-              💡 <em>Tap <strong>"Save to Photos"</strong> ➔ tap <strong>"Save Image"</strong> (Photos icon), or tap &amp; hold the photo to save.</em>
-            </div>
-          </div>
-
-          <!-- Canvas Floating Zoom Bar -->
-          <div class="canvas-zoom-bar" id="canvasZoomBar" style="display:none;" aria-label="Photo Zoom Controls">
-            <button type="button" id="btnZoomOut" class="btn-canvas-zoom" title="Zoom Out (Ctrl -)">🔍−</button>
-            <span class="zoom-percent" id="zoomPercent">Fit</span>
-            <button type="button" id="btnZoomIn" class="btn-canvas-zoom" title="Zoom In (Ctrl +)">🔍+</button>
-            <button type="button" id="btnZoomReset" class="btn-canvas-zoom btn-zoom-reset" title="Fit to Screen">Fit</button>
-          </div>
-
-          <div id="emptyPlaceholder" class="empty-placeholder">
-            <div class="empty-icon">📍</div>
-            <h2 class="empty-title">No Photo Loaded Yet</h2>
-            <p class="empty-desc">Upload or take a photo from the sidebar to stamp custom location details, map snippet, and binary EXIF metadata.</p>
-          </div>
-          <div class="canvas-stage" id="canvasStage" style="display:none;">
-            <canvas id="outputCanvas" style="display:none"></canvas>
-            <img id="outputImg" class="output-img" alt="Geo-Tagged Stamped Photo" style="display:none;">
-          </div>
-        </div>
-      </main>
     </div>
     <footer class="app-footer" id="appFooter">
       <div class="footer-brand-row"><strong>GeoTag Studio</strong> • Powered by <a href="https://www.youtube.com/@TheCompetitiveEdge-b4z" target="_blank" rel="noopener noreferrer">The Competitive Edge</a> • <a href="./privacy-policy.html">🔒 Privacy Policy</a></div>
@@ -468,6 +476,6 @@
   <!-- Vendored Offline Scripts -->
   <script src="./assets/leaflet/leaflet.js"></script>
   <script src="./assets/vendor/jszip.min.js"></script>
-  <script src="./js/app.bundle.js?v=1.0.8.2"></script>
+  <script src="./js/app.bundle.js?v=1.0.8.3"></script>
 </body>
 </html>

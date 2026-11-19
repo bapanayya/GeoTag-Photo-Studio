@@ -1,4 +1,4 @@
-const CACHE_NAME = 'geotag-studio-v3';
+const CACHE_NAME = 'geotag-studio-v4';
 const ASSETS = [
   './',
   './index.html',
