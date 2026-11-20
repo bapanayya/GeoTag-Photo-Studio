@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
   <link rel="stylesheet" href="./assets/leaflet/leaflet.css">
-  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.4">
+  <link rel="stylesheet" href="./css/styles.css?v=1.0.8.5">
 </head>
 <body>
 
@@ -136,19 +136,6 @@
                 📥 Download
               </button>
             </div>
-
-            <!-- Live Camera Viewfinder Actions (Visible while live camera stream is active in Section 1) -->
-            <div class="toolbar-actions" id="cameraLiveToolbarActions" style="display:none;">
-              <button type="button" id="btnFlipCamera" class="btn-action-secondary" style="display:none;" title="Switch between front and back camera">
-                🔄 Flip Camera
-              </button>
-              <button type="button" id="btnSnapLivePhoto" class="btn-action-snap" title="Capture photo now with live Geo-Tag stamp">
-                📸 Capture Photo
-              </button>
-              <button type="button" id="btnCancelLiveCamera" class="btn-action-secondary" title="Cancel live camera">
-                ❌ Cancel
-              </button>
-            </div>
           </div>
 
           <!-- Canvas Viewport -->
@@ -181,22 +168,6 @@
               <span class="zoom-percent" id="zoomPercent">Fit</span>
               <button type="button" id="btnZoomIn" class="btn-canvas-zoom" title="Zoom In (Ctrl +)">🔍+</button>
               <button type="button" id="btnZoomReset" class="btn-canvas-zoom btn-zoom-reset" title="Fit to Screen">Fit</button>
-            </div>
-
-            <!-- In-Place Live Camera Viewfinder with Real-Time Geo-Tag Stamp Overlay -->
-            <div id="cameraStreamContainer" class="camera-stream-container" style="display:none;">
-              <video id="liveCameraVideo" autoplay playsinline muted class="live-camera-video"></video>
-              <div id="liveCameraStampOverlay" class="live-camera-stamp-overlay">
-                <div class="live-stamp-header">
-                  <span class="live-stamp-badge" id="liveStampBadge">📍 Geo-Tag Camera</span>
-                </div>
-                <div class="live-stamp-body">
-                  <div class="live-stamp-title" id="liveStampTitle">📍 Loading location...</div>
-                  <div class="live-stamp-address" id="liveStampAddress"></div>
-                  <div class="live-stamp-coords" id="liveStampCoords"></div>
-                  <div class="live-stamp-date" id="liveStampDate"></div>
-                </div>
-              </div>
             </div>
 
             <div id="emptyPlaceholder" class="empty-placeholder" style="display:none;">
@@ -410,24 +381,32 @@
     </div>
   </div>
 
-  <!-- Live Camera Viewfinder Modal -->
-  <div id="cameraModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 600px;">
-      <div class="modal-header">
-        <h3 class="modal-title">📸 Live Camera Viewfinder</h3>
-        <button type="button" id="btnCloseCameraModal" class="btn-close-modal">&times;</button>
-      </div>
-      <div class="modal-body" style="display: flex; align-items: center; justify-content: center; background: #000; min-height: 340px; padding: 0;">
-        <video id="webcamVideo" autoplay playsinline style="width: 100%; max-height: 400px; object-fit: contain;"></video>
-      </div>
-      <div class="modal-footer" style="justify-content: center; gap: 16px;">
-        <button type="button" id="btnSnapPhoto" class="btn-action-primary" style="padding: 10px 28px; font-size: 0.95rem;">
-          📸 Capture Photo
-        </button>
-        <button type="button" id="btnCancelCamera" class="btn-action-secondary">
-          Cancel
-        </button>
-      </div>
+  <!-- Full Screen Live Camera Viewfinder Overlay -->
+  <div id="fullScreenCameraOverlay" class="fullscreen-camera-overlay" style="display:none;" aria-label="Camera Viewfinder">
+    <!-- Camera Video Element (fills 100% of viewport without obstruction) -->
+    <video id="liveCameraVideo" autoplay playsinline muted class="fullscreen-camera-video"></video>
+    <video id="webcamVideo" autoplay playsinline muted style="display:none;"></video>
+    
+    <!-- Top Floating Controls Bar -->
+    <div class="fullscreen-camera-topbar">
+      <button type="button" id="btnCancelLiveCamera" class="btn-fs-control" title="Close Camera" aria-label="Close Camera">
+        ✕
+      </button>
+      <div class="fs-camera-title">📸 Camera</div>
+      <button type="button" id="btnFlipCamera" class="btn-fs-control" style="display:none;" title="Flip Camera" aria-label="Flip Camera">
+        🔄
+      </button>
+    </div>
+
+    <!-- Bottom Floating Shutter Controls Bar -->
+    <div class="fullscreen-camera-bottombar">
+      <div class="fs-bottom-spacer"></div>
+      <button type="button" id="btnSnapLivePhoto" class="btn-fs-shutter" title="Take Photo" aria-label="Take Photo">
+        <span class="fs-shutter-inner"></span>
+      </button>
+      <button type="button" id="btnExitLiveCamera" class="btn-fs-text" title="Cancel">
+        Cancel
+      </button>
     </div>
   </div>
 
@@ -509,6 +488,6 @@
   <!-- Vendored Offline Scripts -->
   <script src="./assets/leaflet/leaflet.js"></script>
   <script src="./assets/vendor/jszip.min.js"></script>
-  <script src="./js/app.bundle.js?v=1.0.8.4"></script>
+  <script src="./js/app.bundle.js?v=1.0.8.5"></script>
 </body>
 </html>

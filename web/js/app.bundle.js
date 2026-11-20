@@ -1687,6 +1687,8 @@ function initDom() {
   elements.btnAcceptPhoto = document.getElementById('btnAcceptPhoto');
   elements.btnRetakePhoto = document.getElementById('btnRetakePhoto');
   elements.btnChangePhoto = document.getElementById('btnChangePhoto');
+  elements.fullScreenCameraOverlay = document.getElementById('fullScreenCameraOverlay');
+  elements.btnExitLiveCamera = document.getElementById('btnExitLiveCamera');
   elements.btnFlipCamera = document.getElementById('btnFlipCamera');
   elements.btnSnapLivePhoto = document.getElementById('btnSnapLivePhoto');
   elements.btnCancelLiveCamera = document.getElementById('btnCancelLiveCamera');
@@ -2037,6 +2039,7 @@ function initInitialState() {
   if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'none';
   if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
   if (elements.canvasStage) elements.canvasStage.style.display = 'none';
+  if (elements.fullScreenCameraOverlay) elements.fullScreenCameraOverlay.style.display = 'none';
   if (elements.cameraStreamContainer) elements.cameraStreamContainer.style.display = 'none';
   if (elements.cameraLiveToolbarActions) elements.cameraLiveToolbarActions.style.display = 'none';
   if (elements.stampedToolbarActions) elements.stampedToolbarActions.style.display = 'flex';
@@ -2822,20 +2825,10 @@ async function openLiveCamera() {
   try {
     closeLiveCamera();
 
-    // Switch Section 1 to Live Camera Mode
-    if (elements.dropzone) elements.dropzone.style.display = 'none';
-    if (elements.previewStageWrapper) elements.previewStageWrapper.style.display = 'flex';
-    if (elements.canvasStage) elements.canvasStage.style.display = 'none';
-    if (elements.emptyPlaceholder) elements.emptyPlaceholder.style.display = 'none';
-    if (elements.iosPhotosBanner) elements.iosPhotosBanner.style.display = 'none';
-    if (elements.cameraStreamContainer) elements.cameraStreamContainer.style.display = 'flex';
-    if (elements.stampedToolbarActions) elements.stampedToolbarActions.style.display = 'none';
-    if (elements.cameraLiveToolbarActions) elements.cameraLiveToolbarActions.style.display = 'flex';
-    if (elements.photoMetrics) elements.photoMetrics.textContent = '📸 Live Camera • Real-time Geo-Tag Viewfinder';
-
-    updateLiveCameraStampOverlay();
-    clearInterval(liveOverlayTimer);
-    liveOverlayTimer = setInterval(updateLiveCameraStampOverlay, 1000);
+    // Show Full Screen Camera Viewfinder
+    if (elements.fullScreenCameraOverlay) {
+      elements.fullScreenCameraOverlay.style.display = 'flex';
+    }
 
     const constraints = {
       video: {
@@ -2885,6 +2878,15 @@ function closeLiveCamera() {
   webcamStream = null;
   if (elements.liveCameraVideo) {
     elements.liveCameraVideo.srcObject = null;
+  }
+  if (elements.webcamVideo) {
+    elements.webcamVideo.srcObject = null;
+  }
+  if (elements.fullScreenCameraOverlay) {
+    elements.fullScreenCameraOverlay.style.display = 'none';
+  }
+  if (elements.cameraModal) {
+    elements.cameraModal.classList.remove('active');
   }
   if (elements.cameraStreamContainer) elements.cameraStreamContainer.style.display = 'none';
   if (elements.cameraLiveToolbarActions) elements.cameraLiveToolbarActions.style.display = 'none';
@@ -3670,7 +3672,11 @@ function setupEvents() {
   if (elements.btnSnapLivePhoto) elements.btnSnapLivePhoto.addEventListener('click', snapLivePhoto);
   if (elements.btnCancelLiveCamera) elements.btnCancelLiveCamera.addEventListener('click', () => {
     closeLiveCamera();
-    initInitialState();
+    if (!state.photos.length) initInitialState();
+  });
+  if (elements.btnExitLiveCamera) elements.btnExitLiveCamera.addEventListener('click', () => {
+    closeLiveCamera();
+    if (!state.photos.length) initInitialState();
   });
   if (elements.btnFlipCamera) elements.btnFlipCamera.addEventListener('click', flipLiveCamera);
 

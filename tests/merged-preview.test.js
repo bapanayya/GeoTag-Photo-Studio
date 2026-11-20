@@ -19,9 +19,11 @@ assert(indexHtml.includes('id="previewStageWrapper"'), 'index.html must include 
 assert(indexHtml.includes('id="btnRetakePhoto"'), 'index.html must include #btnRetakePhoto');
 assert(indexHtml.includes('id="btnChangePhoto"'), 'index.html must include #btnChangePhoto');
 assert(indexHtml.includes('id="btnAcceptPhoto"'), 'index.html must include #btnAcceptPhoto');
-assert(indexHtml.includes('id="cameraStreamContainer"'), 'index.html must include #cameraStreamContainer');
+assert(indexHtml.includes('id="fullScreenCameraOverlay"'), 'index.html must include #fullScreenCameraOverlay');
 assert(indexHtml.includes('id="liveCameraVideo"'), 'index.html must include #liveCameraVideo');
-assert(indexHtml.includes('id="liveCameraStampOverlay"'), 'index.html must include #liveCameraStampOverlay');
+assert(indexHtml.includes('id="btnSnapLivePhoto"'), 'index.html must include #btnSnapLivePhoto');
+assert(indexHtml.includes('id="btnExitLiveCamera"'), 'index.html must include #btnExitLiveCamera');
+assert(!indexHtml.includes('id="liveCameraStampOverlay"'), 'index.html must NOT contain liveCameraStampOverlay during capture stage');
 assert(!indexHtml.includes('id="toggleShowNote" checked'), 'toggleShowNote must not be checked by default');
 assert(indexHtml.includes('id="toggleShowNote"'), 'toggleShowNote must exist in index.html');
 assert(!indexHtml.includes('<main class="preview-panel">'), 'index.html must NOT contain bottom preview-panel');
@@ -41,6 +43,7 @@ const stylesCss = fs.readFileSync(stylesCssPath, 'utf8');
 assert(stylesCss.includes('.photo-workspace-panel'), 'styles.css must style .photo-workspace-panel');
 assert(stylesCss.includes('.preview-stage-wrapper'), 'styles.css must style .preview-stage-wrapper');
 assert(stylesCss.includes('.photo-panel-title'), 'styles.css must style .photo-panel-title');
+assert(stylesCss.includes('.fullscreen-camera-overlay'), 'styles.css must style .fullscreen-camera-overlay');
 
 // 3. Verify web/js/app.js logic
 const appJsPath = path.join(rootDir, 'web', 'js', 'app.js');
@@ -48,6 +51,7 @@ const appJs = fs.readFileSync(appJsPath, 'utf8');
 
 assert(appJs.includes('elements.previewStageWrapper'), 'app.js must reference previewStageWrapper');
 assert(appJs.includes('elements.btnAcceptPhoto'), 'app.js must reference btnAcceptPhoto');
+assert(appJs.includes('elements.fullScreenCameraOverlay'), 'app.js must reference fullScreenCameraOverlay');
 assert(appJs.includes('openLiveCamera'), 'app.js must define openLiveCamera');
 assert(appJs.includes('acceptAndSaveActivePhoto'), 'app.js must define acceptAndSaveActivePhoto');
 assert(appJs.includes('showCustomNote: false'), 'app.js must default showCustomNote to false');

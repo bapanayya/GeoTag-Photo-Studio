@@ -1170,91 +1170,145 @@ input:checked + .slider:before {
   margin: 0 auto;
 }
 
-/* In-Place Live Camera Stream Viewfinder */
-.camera-stream-container {
-  position: relative;
+/* Full Screen Live Camera Viewfinder Overlay */
+.fullscreen-camera-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-color: #000000;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.fullscreen-camera-video {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  max-width: 900px;
-  min-height: 360px;
-  max-height: 70vh;
+  height: 100%;
+  object-fit: cover;
+  background: #000000;
+}
+
+.fullscreen-camera-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: env(safe-area-inset-top, 16px) 18px 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 10;
+}
+
+.btn-fs-control {
+  background: rgba(15, 23, 42, 0.7);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #000;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  font-size: 1.25rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.btn-fs-control:active {
+  transform: scale(0.92);
+  background: rgba(56, 189, 248, 0.4);
+}
+
+.fs-camera-title {
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.fullscreen-camera-bottombar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px calc(env(safe-area-inset-bottom, 20px) + 16px);
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 10;
+}
+
+.fs-bottom-spacer {
+  width: 50px;
+}
+
+.btn-fs-shutter {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 4px solid #ffffff;
+  background: transparent;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease;
   margin: 0 auto;
 }
 
-.live-camera-video {
+.btn-fs-shutter:active {
+  transform: scale(0.92);
+}
+
+.fs-shutter-inner {
   width: 100%;
   height: 100%;
-  max-height: 65vh;
-  object-fit: contain;
+  border-radius: 50%;
+  background: #ffffff;
   display: block;
+  transition: transform 0.1s ease, background 0.1s ease;
 }
 
-.live-camera-stamp-overlay {
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
-  max-width: 520px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  color: #fff;
-  pointer-events: none;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-  animation: iosBannerFadeIn 0.25s ease-out;
-}
-
-.live-stamp-header {
-  margin-bottom: 4px;
-}
-
-.live-stamp-badge {
-  display: inline-block;
+.btn-fs-shutter:active .fs-shutter-inner {
+  transform: scale(0.85);
   background: #38bdf8;
-  color: #0f172a;
-  font-weight: 700;
-  font-size: 0.72rem;
-  padding: 2px 7px;
-  border-radius: 4px;
 }
 
-.live-stamp-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.live-stamp-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #f8fafc;
-}
-
-.live-stamp-address {
-  font-size: 0.76rem;
-  color: #cbd5e1;
-}
-
-.live-stamp-coords {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.live-stamp-date {
-  font-size: 0.72rem;
-  color: #38bdf8;
+.btn-fs-text {
+  background: rgba(15, 23, 42, 0.7);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.88rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.btn-fs-text:active {
+  transform: scale(0.92);
 }
 
 /* iOS Photos Save Banner */
